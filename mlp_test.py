@@ -75,7 +75,7 @@ def get_model_and_tokenizer():
     Load the distilled Qwen 1.5B model and its tokenizer.
     Throws an error if the model cannot be loaded.
     """
-    model_name = "distilled-qwen-1.5b"
+    model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True)
