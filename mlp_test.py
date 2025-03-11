@@ -257,9 +257,43 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     The input is a 1024-dim vector (hidden state) and the output is a vector of length (S/W).
     Training is performed on one entry per question (grouping the num_traces rows for each question).
     Reports overall MSE and per-position MSE and Pearson correlation on both train and test splits.
+    
+    Args:
+        csv_file: Directory containing the batched results (ignored if directory exists)
+        num_epochs: Number of training epochs
+        batch_size: Batch size for training
+        learning_rate: Learning rate for optimizer
     """
-    print(f"Loading data from {csv_file}...")
-    df = pd.read_csv(csv_file)
+    # Load all batched data files
+    data_dir = "data/gsm8k_results"
+    if not os.path.exists(data_dir):
+        raise ValueError(f"Data directory {data_dir} not found. Please generate data first.")
+    
+    print("Loading and combining all batched data files...")
+    all_dfs = []
+    
+    # Load train split files (0-74)
+    for i in range(75):
+        train_file = os.path.join(data_dir, f"gsm8k_results_train_{i}.csv")
+        if os.path.exists(train_file):
+            df = pd.read_csv(train_file)
+            all_dfs.append(df)
+            print(f"Loaded train batch {i}")
+    
+    # Load test split files (0-13)
+    for i in range(14):
+        test_file = os.path.join(data_dir, f"gsm8k_results_test_{i}.csv")
+        if os.path.exists(test_file):
+            df = pd.read_csv(test_file)
+            all_dfs.append(df)
+            print(f"Loaded test batch {i}")
+    
+    if not all_dfs:
+        raise ValueError("No data files found in data/gsm8k_results/. Please generate data first.")
+    
+    # Combine all dataframes
+    df = pd.concat(all_dfs, ignore_index=True)
+    print(f"Combined {len(all_dfs)} data files. Total rows: {len(df)}")
 
     import ast
     def parse_list(x):
