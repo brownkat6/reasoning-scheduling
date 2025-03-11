@@ -1,7 +1,7 @@
 '''
 # Proof of concept: can MLP on hidden states predict required size? 
 Model: distilled Qwen 1.5B model. Dataset: GSM8K. $W=16$. Max new tokens $S=4096$.    
-MLP predictor: $\mathbb{R}^{1024}$ -> H=128 -> $\mathbb{R}^{S/W}.  
+MLP predictor: $\mathbb{R}^{1536}$ -> H=128 -> $\mathbb{R}^{S/W}.  
 For each question $q$ in GSM8K, sample 100 reasoning traces. For each reasoning trace, test
 post-hoc whether we would have generated the answer if we had stopped generating tokens after W, 2W, 3W,...,S tokens, inserted the suffix "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n\\[\\boxed{" to force a solution. Compute the proportion of the 100 samples for which the early terminated answer would have been correct. This yields a $W/S$ element vector of proportions in range [0,1]. If a sampled reasoning trace only has, for instance, 100 tokens, then the early stopping probability after 200 tokens is just the proportion after 100 tokens elapsed.   
 
@@ -10,7 +10,7 @@ On the train/test set, compute MSE as well as the pearson correlation between pr
 1) Get GSM8K questions from train and test split and load the distill qwen 1.5b model.  
 2) Sample 100 reasoning traces up to S=4096 new tokens per question, generated with temperature 0.6. For each sampled trace, generate the answer if we had stopped after W,2W,3W,... tokens. For each sampled trace, store a list of the W/S generated answers, a W/S length list of 0/1 indicating whether a given answer was correct, and the proportion of answers that were correct.  
 3) Generate a pandas dataframe with 100 rows per question in GSM8K. The columns should be the GSM8K question id, the question text itself, whether the question is from the train or test split, the hidden state from the model from the first forward pass of the question (before any reasoning/answer tokens are generated), the reasoning trace id, the generated reasoning trace, the list of W/S generated answers if we had stopped early after any point, inserted the answer suffix and generated and extracted a numerical answer, the list of W/S extracted answers, and the corresponding list of W/S proportions across all 100 traces for this query that were correct. Note that within the group of 100 rows corresponding to a single GSM8K question, the question id, question text itself, hidden state, and list of proportions after early stopping after each point will all be shared. Save the computed data to a csv.      
-4) Write separate python code that loads the pandas dataframe from csv after it has been computed.  The new python code should construct an MLP that takes in the 1024 dimension hidden states as input, has one hidden layer with dimension 128, and outputs a W/S dimensional vector. It should be trained on a dataset with one entry per question in the GSM8K dataset, where the input is the hidden state and the output is the W/S dimensional list of proportions. The code should report the MSE on both the train and the test set, and it should also output data about, for each W/S possible early stopping position, the pearson correlation between the predicted value and the actual value.  It should report MSE both across the entire predicted and actual output and across each individual entry of the W/S output individually.  
+4) Write separate python code that loads the pandas dataframe from csv after it has been computed.  The new python code should construct an MLP that takes in the 1536 dimension hidden states as input, has one hidden layer with dimension 128, and outputs a W/S dimensional vector. It should be trained on a dataset with one entry per question in the GSM8K dataset, where the input is the hidden state and the output is the W/S dimensional list of proportions. The code should report the MSE on both the train and the test set, and it should also output data about, for each W/S possible early stopping position, the pearson correlation between the predicted value and the actual value.  It should report MSE both across the entire predicted and actual output and across each individual entry of the W/S output individually.  
 '''
 
 import argparse
@@ -165,8 +165,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
         hidden_state_tensor = outputs.hidden_states[-1][0, -1, :]
         hidden_state = hidden_state_tensor.detach().cpu().numpy().tolist()
         
-        # Assert hidden state has 1024 dimensions
-        assert len(hidden_state) == 1024, f"Hidden state dimension is {len(hidden_state)}, expected 1024"
+        # Assert hidden state has 1536 dimensions
+        assert len(hidden_state) == 1536, f"Hidden state dimension is {len(hidden_state)}, expected 1536"
         
         trace_results = []
         early_correct_matrix = []  # aggregate correctness flags per early stopping position
@@ -254,7 +254,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
 def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learning_rate=1e-3):
     """
     Train an MLP to predict the early stopping correctness proportions from the hidden state.
-    The input is a 1024-dim vector (hidden state) and the output is a vector of length (S/W).
+    The input is a 1536-dim vector (hidden state) and the output is a vector of length (S/W).
     Training is performed on one entry per question (grouping the num_traces rows for each question).
     Reports overall MSE and per-position MSE and Pearson correlation on both train and test splits.
     
@@ -308,7 +308,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     # Group by question_id, split, question_text and take the first occurrence
     grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
 
-    X = np.vstack(grouped['hidden_state'].values)  # shape (num_questions, 1024)
+    X = np.vstack(grouped['hidden_state'].values)  # shape (num_questions, 1536)
     Y = np.vstack(grouped['early_stop_correct_proportions'].values)  # shape (num_questions, output_dim)
 
     train_mask = grouped['split'] == 'train'
@@ -318,7 +318,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     print(f"Training questions: {X_train.shape[0]}, Testing questions: {X_test.shape[0]}")
 
     class MLP(nn.Module):
-        def __init__(self, input_dim=1024, hidden_dim=128, output_dim=256):
+        def __init__(self, input_dim=1536, hidden_dim=128, output_dim=256):
             super(MLP, self).__init__()
             self.fc1 = nn.Linear(input_dim, hidden_dim)
             self.relu = nn.ReLU()
@@ -330,7 +330,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
             x = self.fc2(x)
             return x
 
-    model_mlp = MLP(input_dim=1024, hidden_dim=128, output_dim=Y.shape[1])
+    model_mlp = MLP(input_dim=1536, hidden_dim=128, output_dim=Y.shape[1])
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model_mlp.parameters(), lr=learning_rate)
 
