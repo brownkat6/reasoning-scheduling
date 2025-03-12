@@ -13,6 +13,8 @@
 #SBATCH --mem=128G                 # Memory per node
 #SBATCH --cpus-per-task=4          # Number of CPU cores per task
 
+## TODO: launch math500 5 generation calls
+
 # Create logs and data directories if they don't exist
 mkdir -p logs
 mkdir -p data/gsm8k_results

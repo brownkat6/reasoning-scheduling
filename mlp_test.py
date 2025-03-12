@@ -24,12 +24,29 @@ import torch.nn as nn
 import torch.optim as optim
 
 from scipy.stats import pearsonr
+from datasets import load_dataset
 
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM
 except ImportError:
     raise ImportError("Transformers library not found. Please install via pip install transformers")
 
+def load_math500_dataset():
+    """
+    Load the Math500 dataset using Hugging Face datasets.
+    The dataset is loaded from "HuggingFaceH4/MATH-500".
+    
+    Only contains test set.
+    """
+    ds = load_dataset("HuggingFaceH4/MATH-500")
+    test_data = []
+    
+    for i, sample in enumerate(ds):
+        question = sample["problem"]
+        answer_field = sample["answer"]
+        ground_truth = answer_field.strip()
+        test_data.append({"id": f"train_{i}", "question": question, "answer": ground_truth})
+    return test_data
 
 def load_gsm8k_dataset():
     """
@@ -38,10 +55,6 @@ def load_gsm8k_dataset():
     For each sample, the ground truth answer is extracted as the text following "#### " in the answer column.
     Returns two lists (for train and test) of dicts with keys: 'id', 'question', 'answer'.
     """
-    try:
-        from datasets import load_dataset
-    except ImportError:
-        raise ImportError("Please install the datasets library (pip install datasets) to load GSM8K data.")
     
     ds_train = load_dataset("openai/gsm8k", "main", split="train")
     ds_test = load_dataset("openai/gsm8k", "main", split="test")
@@ -53,7 +66,7 @@ def load_gsm8k_dataset():
         question = sample["question"]
         answer_field = sample["answer"]
         if "#### " in answer_field:
-            ground_truth = answer_field.split("#### ")[-1].strip()
+            ground_truth = answer_field.split("#### ")[-1].strip() if "#### " in answer_field else answer_field.strip()
         else:
             ground_truth = answer_field.strip()
         train_data.append({"id": f"train_{i}", "question": question, "answer": ground_truth})
@@ -96,7 +109,77 @@ def extract_numerical_answer(forced_text):
     return None
 
 
-def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100):
+def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, batch_size=16):
+    """
+    Evaluate a batch of model outputs against a ground truth answer using the LLM as a judge.
+    
+    Args:
+        model: The language model to use for evaluation
+        tokenizer: The tokenizer for the model
+        batch_outputs: List of model outputs to evaluate
+        ground_truth: The ground truth answer string
+        batch_size: Size of batches for evaluation (default 16)
+    
+    Returns:
+        List of 0s and 1s indicating whether each output matches the ground truth
+        
+    NOTE: judgement template taken from LEARNING HOW HARD TO THINK: INPUT-ADAPTIVE ALLOCATION OF LM COMPUTATION
+    """
+    evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
+an excerpt of the response matches the given gold truth answer. The format or units of
+the response and gold truth answer might be different. However, you must evaluate if the
+answers are numerically equivalent/identical. Be extra careful when evaluating fractions,
+they must simplify to the same value Your response should be a single word followed by an
+explanation. 'YES' if the answers are equivalent and 'NO' if they are not.
+Examples:
+A) 7% and 7 are equivalent
+B) frac{10}{2} and frac {20}{4} are equivalent.
+C) 3,5,7 and 3,8,9 are not equivalent.
+Ground Truth Answer: {ground_truth}
+Response: {response}"""
+
+    results = []
+    
+    # Process outputs in batches
+    for i in range(0, len(batch_outputs), batch_size):
+        batch_end = min(i + batch_size, len(batch_outputs))
+        current_batch = batch_outputs[i:batch_end]
+        
+        # Create prompts for current batch
+        prompts = [
+            evaluation_template.format(
+                ground_truth=ground_truth,
+                response=output
+            )
+            for output in current_batch
+        ]
+        
+        # Tokenize all prompts in batch
+        inputs = tokenizer(prompts, return_tensors="pt", padding=True).to('cuda')
+        
+        # Generate evaluations for the batch
+        with torch.inference_mode():
+            eval_outputs = model.generate(
+                inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_new_tokens=10,
+                pad_token_id=tokenizer.pad_token_id,
+                num_return_sequences=1,
+                temperature=0.1,
+            )
+        
+        # Process each evaluation output
+        for eval_output in eval_outputs:
+            eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
+            # Check if the response starts with 'YES'
+            results.append(1 if eval_text.strip().upper().startswith('YES') else 0)
+        
+        # Clear CUDA cache after each batch
+        torch.cuda.empty_cache()
+    
+    return results
+
+def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
     """
     Generate GSM8K reasoning trace data for a specific batch of questions.
     Processes questions from index batch_idx*batch_size to (batch_idx+1)*batch_size
@@ -112,7 +195,12 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         batch_size: Number of questions per batch
     """
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
-    train_data, test_data = load_gsm8k_dataset()
+    if dataset == 'gsm8k':
+        train_data, test_data = load_gsm8k_dataset()
+    elif dataset == 'math500':
+        if split == 'train':
+            raise ValueError("Math500 does not have a train split")
+        test_data = load_math500_dataset()
     
     # Select the appropriate split
     questions = train_data if split == 'train' else test_data
@@ -257,19 +345,26 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             num_return_sequences=1
                         )
                     
-                    # Only move to CPU when needed for string processing
-                    for j, output_ids in enumerate(batch_outputs):
-                        forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
-                        early_generated_answers.append(forced_text)
-                        extracted = extract_numerical_answer(forced_text)
-                        early_extracted_answers.append(extracted)
-                        try:
-                            if float(extracted) == float(q_answer):
-                                early_correct_flags.append(1)
-                            else:
+                    if dataset == 'gsm8k':
+                        # Only move to CPU when needed for string processing
+                        for j, output_ids in enumerate(batch_outputs):
+                            forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
+                            early_generated_answers.append(forced_text)
+                            extracted = extract_numerical_answer(forced_text)
+                            early_extracted_answers.append(extracted)
+                            try:
+                                if float(extracted) == float(q_answer):
+                                    early_correct_flags.append(1)
+                                else:
+                                    early_correct_flags.append(0)
+                            except Exception:
                                 early_correct_flags.append(0)
-                        except Exception:
-                            early_correct_flags.append(0)
+                    else:
+                        # Use LLM evaluation for Math500
+                        forced_texts = [tokenizer.decode(output_ids.cpu(), skip_special_tokens=True) for output_ids in batch_outputs]
+                        forced_texts = [t[:-1] if ("boxed{" in t and t[-1] == "}") else t for t in forced_texts]
+                        forced_texts = [t.split("boxed{")[-1] if "boxed{" in t else t for t in forced_texts]
+                        early_correct_flags = evaluate_answers_with_llm(model, tokenizer, forced_texts, q_answer)
                 
                 early_correct_matrix.append(early_correct_flags)
                 trace_results.append({
@@ -360,6 +455,9 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     # Combine all dataframes
     df = pd.concat(all_dfs, ignore_index=True)
     print(f"Combined {len(all_dfs)} data files. Total rows: {len(df)}")
+    # print number of unique questions in train and number of unique questions in test
+    #print(f"Number of unique questions in train: {df[df['split'] == 'train']['question_id'].nunique()}")
+    #print(f"Number of unique questions in test: {df[df['split'] == 'test']['question_id'].nunique()}")
 
     import ast
     def parse_list(x):
@@ -404,7 +502,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     Y_train_tensor = torch.tensor(Y_train, dtype=torch.float32).to('cuda')
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to('cuda')
     Y_test_tensor = torch.tensor(Y_test, dtype=torch.float32).to('cuda')
-    
+
     train_dataset = torch.utils.data.TensorDataset(X_train_tensor, Y_train_tensor)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
@@ -459,6 +557,7 @@ def main():
     parser.add_argument("--batch_idx", type=int, help="Batch index for data generation (required with --generate)")
     parser.add_argument("--split", type=str, choices=['train', 'test'], help="Which split to process (required with --generate)")
     parser.add_argument("--csv_file", type=str, default="gsm8k_results.csv", help="CSV file to load/save generated data")
+    parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500'], help="Which dataset to use")
     args = parser.parse_args()
 
     if args.generate:
@@ -466,7 +565,7 @@ def main():
             parser.error("--batch_idx is required when using --generate")
         if args.split is None:
             parser.error("--split is required when using --generate")
-        generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=args.csv_file)
+        generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=args.csv_file, dataset=args.dataset)
     elif args.train:
         train_mlp(csv_file=args.csv_file)
     else:
