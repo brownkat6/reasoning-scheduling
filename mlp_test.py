@@ -236,14 +236,17 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     completed_question_ids = set()
     all_data = []
     if os.path.exists(output_csv):
-        print(f"Loading existing results from {output_csv}")
-        existing_df = pd.read_csv(output_csv)
-        # Count number of traces per question
-        trace_counts = existing_df.groupby('question_id').size()
-        # Get questions with all traces completed
-        completed_question_ids = set(trace_counts[trace_counts >= num_traces].index)
-        all_data = existing_df.to_dict('records')
-        print(f"Found {len(completed_question_ids)} completed questions")
+        try:
+            print(f"Loading existing results from {output_csv}")
+            existing_df = pd.read_csv(output_csv)
+            # Count number of traces per question
+            trace_counts = existing_df.groupby('question_id').size()
+            # Get questions with all traces completed
+            completed_question_ids = set(trace_counts[trace_counts >= num_traces].index)
+            all_data = existing_df.to_dict('records')
+            print(f"Found {len(completed_question_ids)} completed questions")
+        except Exception as e:
+            print(f"Error loading existing results from {output_csv}: {e}")
 
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
