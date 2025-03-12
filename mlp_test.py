@@ -96,7 +96,7 @@ def extract_numerical_answer(forced_text):
     return None
 
 
-def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output_csv='gsm8k_results.csv', batch_size=100):
+def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100):
     """
     Generate GSM8K reasoning trace data for a specific batch of questions.
     Processes questions from index batch_idx*batch_size to (batch_idx+1)*batch_size
@@ -146,7 +146,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
 
     early_stopping_positions = list(range(W, S + 1, W))  # e.g., 16, 32, ... 4096
 
-    for question in batch_questions[:2]: # TODO: remove limit 
+    for question in batch_questions:
         qid = question['id']
         
         # Skip if question is already completed
@@ -170,7 +170,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
         
         trace_results = []
         early_correct_matrix = []  # aggregate correctness flags per early stopping position
-        num_traces = 2 # TODO: remove limit 
+        
         for trace_id in range(num_traces): 
             # Generate reasoning trace using model generation
             inputs_trace = tokenizer(q_text, return_tensors="pt")
@@ -192,7 +192,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
             
             # Process early stopping positions in batches
             batch_size = 16  # Process 16 positions at a time
-            for i in range(0, len(early_stopping_positions[:4]), batch_size): # TODO: remove limit 
+            for i in range(0, len(early_stopping_positions), batch_size): 
                 print(f"Processing batch {i//batch_size} of {len(early_stopping_positions)//batch_size}")
                 batch_positions = early_stopping_positions[i:i + batch_size]
                 batch_prompts = []
