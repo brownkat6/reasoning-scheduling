@@ -91,6 +91,12 @@ def get_judge_model_and_tokenizer():
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
         model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        
+        # Set padding token to be the same as EOS token
+        tokenizer.pad_token = tokenizer.eos_token
+        # Update model's pad token ID to match
+        model.config.pad_token_id = tokenizer.pad_token_id
+        
         model.eval()
     except Exception as e:
         raise RuntimeError(f"Error loading model {model_name}: {e}")
