@@ -404,7 +404,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     Y_train_tensor = torch.tensor(Y_train, dtype=torch.float32).to('cuda')
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to('cuda')
     Y_test_tensor = torch.tensor(Y_test, dtype=torch.float32).to('cuda')
-
+    
     train_dataset = torch.utils.data.TensorDataset(X_train_tensor, Y_train_tensor)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
