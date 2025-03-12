@@ -433,7 +433,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     print(f"Data saved to {output_csv}")
 
 
-def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learning_rate=1e-3):
+def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3):
     """
     Train an MLP to predict the early stopping correctness proportions from the hidden state.
     The input is a 1536-dim vector (hidden state) and the output is a vector of length (S/W).
@@ -447,7 +447,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
         learning_rate: Learning rate for optimizer
     """
     # Load all batched data files
-    data_dir = "data/gsm8k_results"
+    #data_dir = "data/gsm8k_results"
     if not os.path.exists(data_dir):
         raise ValueError(f"Data directory {data_dir} not found. Please generate data first.")
     
@@ -656,18 +656,20 @@ def main():
     parser.add_argument("--csv_file", type=str, default="gsm8k_results.csv", help="CSV file to load/save generated data")
     parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
+    parser.add_argument("--data_dir", type=str, default="data/gsm8k_results", help="Directory containing the batched results")
     args = parser.parse_args()
     
-    args.csv_file = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.csv_file
+    csv_file = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.csv_file
+    data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.data_dir
 
     if args.generate:
         if args.batch_idx is None:
             parser.error("--batch_idx is required when using --generate")
         if args.split is None:
             parser.error("--split is required when using --generate")
-        generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=args.csv_file, dataset=args.dataset, S=args.S)
+        generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file, dataset=args.dataset, S=args.S)
     elif args.train:
-        train_mlp(csv_file=args.csv_file)
+        train_mlp(data_dir=data_dir)
     else:
         print("Please specify --generate or --train.")
 
