@@ -170,8 +170,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
         
         trace_results = []
         early_correct_matrix = []  # aggregate correctness flags per early stopping position
-        
-        for trace_id in range(num_traces[:2]): # TODO: remove limit 
+        num_traces = 2 # TODO: remove limit 
+        for trace_id in range(num_traces): 
             # Generate reasoning trace using model generation
             inputs_trace = tokenizer(q_text, return_tensors="pt")
             with torch.no_grad():
