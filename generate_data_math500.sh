@@ -7,7 +7,7 @@
 #SBATCH --time=4:00:00             # Time limit
 #SBATCH --nodes=1                   # Number of nodes
 #SBATCH --ntasks=1                 # Number of tasks
-#SBATCH --gres=gpu:1               # Request 1 GPUs
+#SBATCH --gres=gpu:2               # Request 1 GPUs
 #SBATCH --constraint='h100'        # Request H100 GPUs
 #SBATCH --mem=128G                 # Memory per node
 #SBATCH --cpus-per-task=4          # Number of CPU cores per task

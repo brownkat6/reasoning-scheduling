@@ -82,6 +82,20 @@ def load_gsm8k_dataset():
     
     return train_data, test_data
 
+def get_judge_model_and_tokenizer():
+    """
+    Load the Llama-3.1-8B-Instruct model and its tokenizer.
+    Throws an error if the model cannot be loaded.
+    """
+    model_name = "meta-llama/Llama-3.1-8B-Instruct"
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        model.eval()
+    except Exception as e:
+        raise RuntimeError(f"Error loading model {model_name}: {e}")
+    return model, tokenizer
+    
 
 def get_model_and_tokenizer():
     """
@@ -90,8 +104,8 @@ def get_model_and_tokenizer():
     """
     model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
-        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
         model.eval()
     except Exception as e:
         raise RuntimeError(f"Error loading model {model_name}: {e}")
@@ -233,6 +247,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
 
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
+    if dataset == 'math500':
+        judge_model, judge_tokenizer = get_judge_model_and_tokenizer()
 
     # Move model to GPU once
     model = model.to('cuda')
@@ -369,7 +385,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                         # take only the forced_texts before the next newline character
                         forced_texts = [t.split("\n")[0] for t in forced_texts]
                         early_extracted_answers.extend(forced_texts)
-                        early_correct_flags = evaluate_answers_with_llm(model, tokenizer, forced_texts, q_answer)
+                        early_correct_flags = evaluate_answers_with_llm(judge_model, judge_tokenizer, forced_texts, q_answer)
                 
                 early_correct_matrix.append(early_correct_flags)
                 trace_results.append({
