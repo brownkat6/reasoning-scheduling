@@ -142,10 +142,6 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     
     Returns:
         List of 0s and 1s indicating whether each output matches the ground truth
-        
-    NOTE: judgement template taken from LEARNING HOW HARD TO THINK: INPUT-ADAPTIVE ALLOCATION OF LM COMPUTATION
-    
-    TODO: switch to using Llama-3.1-8B-Instruct with temperature set to 0.1 as our evaluation LM
     """
     print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
     evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
@@ -164,6 +160,8 @@ Judgement (YES or NO):
 """
 
     results = []
+    device = next(model.parameters()).device  # Get the device the model is on
+    print(f"evaluate_answers_with_llm device: {device}")
     
     # Process outputs in batches
     for i in range(0, len(batch_outputs), batch_size):
@@ -173,8 +171,9 @@ Judgement (YES or NO):
         # Create prompts for current batch
         prompts = [evaluation_template.format(ground_truth=ground_truth, response=output) for output in current_batch]
         
-        # Tokenize all prompts in batch
-        inputs = tokenizer(prompts, return_tensors="pt", padding=True).to('cuda')
+        # Tokenize all prompts in batch and move to correct device
+        inputs = tokenizer(prompts, return_tensors="pt", padding=True)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         
         # Generate evaluations for the batch
         with torch.inference_mode():
@@ -191,9 +190,10 @@ Judgement (YES or NO):
         eval_texts = []
         for eval_output in eval_outputs:
             eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
-            # Check if the response starts with 'YES'
-            eval_texts.append(eval_text.split("Judgement (YES or NO):")[1].strip())
-            results.append(1 if eval_text.strip().upper().startswith('YES') else 0)
+            # Extract the judgment part
+            judgment_part = eval_text.split("Judgement (YES or NO):")[-1].strip()
+            eval_texts.append(judgment_part)
+            results.append(1 if judgment_part.upper().startswith('YES') else 0)
         print(f"eval_texts: {eval_texts}")
         
         # Clear CUDA cache after each batch
