@@ -38,7 +38,7 @@ def load_math500_dataset():
     
     Only contains test set.
     """
-    ds = load_dataset("HuggingFaceH4/MATH-500")
+    ds = load_dataset("HuggingFaceH4/MATH-500", split="test")
     test_data = []
     
     for i, sample in enumerate(ds):
