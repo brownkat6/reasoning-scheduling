@@ -437,7 +437,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     print(f"Data saved to {output_csv}")
 
 
-def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, dataset='gsm8k'):
+def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, dataset='gsm8k'):
     """
     Train an MLP to predict the early stopping correctness proportions from the hidden state.
     The input is a 1536-dim vector (hidden state) and the output is a vector of length (S/W).
@@ -600,7 +600,7 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, data
     mse_test_overall = np.mean((test_pred - Y_test_np)**2)
     print(f"Overall MSE on train: {mse_train_overall:.4f}")
     print(f"Overall MSE on test: {mse_test_overall:.4f}")
-
+    
     mse_train_individual = np.mean((train_pred - Y_train_np)**2, axis=0)
     mse_test_individual = np.mean((test_pred - Y_test_np)**2, axis=0)
 
@@ -642,8 +642,9 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, data
         plt.scatter(train_pred[:, i], Y_train_np[:, i], alpha=0.5, label='Train', color='blue')
         plt.scatter(test_pred[:, i], Y_test_np[:, i], alpha=0.5, label='Test', color='red')
         
-        plt.plot([0, 1], line_train, color='blue', linestyle='--', alpha=0.8)
-        plt.plot([0, 1], line_test, color='red', linestyle='--', alpha=0.8)
+        plt.plot([0, 1], line_train, color='blue', linestyle='--', alpha=0.8, label='Train fit')
+        plt.plot([0, 1], line_test, color='red', linestyle='--', alpha=0.8, label='Test fit')
+        plt.plot([0, 1], [0, 1], color='black', linestyle=':', alpha=0.5, label='Perfect')
         
         plt.xlabel('Predicted Probability')
         plt.ylabel('Actual Probability')
@@ -674,8 +675,9 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, data
     plt.scatter(train_pred_flat, Y_train_flat, alpha=0.5, label='Train', color='blue')
     plt.scatter(test_pred_flat, Y_test_flat, alpha=0.5, label='Test', color='red')
     
-    plt.plot([0, 1], line_train, color='blue', linestyle='--', alpha=0.8)
-    plt.plot([0, 1], line_test, color='red', linestyle='--', alpha=0.8)
+    plt.plot([0, 1], line_train, color='blue', linestyle='--', alpha=0.8, label='Train fit')
+    plt.plot([0, 1], line_test, color='red', linestyle='--', alpha=0.8, label='Test fit')
+    plt.plot([0, 1], [0, 1], color='black', linestyle=':', alpha=0.5, label='Perfect')
     
     plt.xlabel('Predicted Probability')
     plt.ylabel('Actual Probability')
