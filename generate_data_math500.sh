@@ -23,6 +23,7 @@ python -u mlp_test.py \
     --generate \
     --split test \
     --batch_idx $SLURM_ARRAY_TASK_ID \
-    --csv_file "data/math500_results/math500_results_${SPLIT}_${BATCH_IDX}.csv"
+    --csv_file "data/math500_results/math500_results_${SPLIT}_${BATCH_IDX}.csv" \
+    --dataset math500
 
 echo "Completed processing $SPLIT split, batch $BATCH_IDX" 
