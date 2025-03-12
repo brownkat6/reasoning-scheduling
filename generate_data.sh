@@ -17,8 +17,8 @@ mkdir -p logs
 mkdir -p data/gsm8k_results
 
 # Activate conda environment (adjust as needed)
-source ~/.bashrc
-conda activate myenv  # Replace with your environment name
+#source ~/.bashrc
+#conda activate dat  # Replace with your environment name
 
 # Calculate which split and batch to process
 # Train split has 75 batches (0-74), test has 14 batches (75-88)
