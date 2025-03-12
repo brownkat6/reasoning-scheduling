@@ -359,6 +359,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                         forced_texts = [tokenizer.decode(output_ids.cpu(), skip_special_tokens=True) for output_ids in batch_outputs]
                         forced_texts = [t[:-1] if ("boxed{" in t and t[-1] == "}") else t for t in forced_texts]
                         forced_texts = [t.split("boxed{")[-1] if "boxed{" in t else t for t in forced_texts]
+                        # take only the forced_texts before the next newline character
+                        forced_texts = [t.split("\n")[0] for t in forced_texts]
                         early_extracted_answers.extend(forced_texts)
                         early_correct_flags = evaluate_answers_with_llm(model, tokenizer, forced_texts, q_answer)
                 
