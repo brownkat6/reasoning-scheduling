@@ -475,10 +475,20 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, data
         # Read and concatenate train files in one operation
         if train_files:
             print(f"Loading {len(train_files)} train files...")
-            train_grouped = pd.concat(
-                (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in train_files), 
-                ignore_index=True
-            )
+            train_grouped_dfs = []
+            for f in train_files:
+                try:
+                    df = pd.read_csv(f)
+                    grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+                    train_grouped_dfs.append(grouped)
+                except Exception as e:
+                    print(f"Error loading {f}: {e}")
+            train_grouped = pd.concat(train_grouped_dfs, ignore_index=True)
+            #train_grouped = pd.concat(
+            #    (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in train_files), 
+            #    ignore_index=True
+            #)
+            
             #train_grouped = train_df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
             train_grouped.to_csv(train_grouped_file, index=False)
             print(f"Saved grouped train data with {len(train_grouped)} questions")
@@ -488,10 +498,19 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, data
         # Read and concatenate test files in one operation
         if test_files:
             print(f"Loading {len(test_files)} test files...")
-            test_grouped = pd.concat(
-                (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in test_files), 
-                ignore_index=True
-            )
+            test_grouped_dfs = []
+            for f in test_files:
+                try:
+                    df = pd.read_csv(f)
+                    grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+                    test_grouped_dfs.append(grouped)
+                except Exception as e:
+                    print(f"Error loading {f}: {e}")
+            test_grouped = pd.concat(test_grouped_dfs, ignore_index=True)
+            #test_grouped = pd.concat(
+            #    (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in test_files), 
+            #    ignore_index=True
+            #)
             #test_grouped = test_df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
             test_grouped.to_csv(test_grouped_file, index=False)
             print(f"Saved grouped test data with {len(test_grouped)} questions")
