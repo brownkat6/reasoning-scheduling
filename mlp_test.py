@@ -145,19 +145,19 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     """
     print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
     evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
-an excerpt of the response matches the given gold truth answer. The format or units of
-the response and gold truth answer might be different. However, you must evaluate if the
-answers are numerically equivalent/identical. Be extra careful when evaluating fractions,
-they must simplify to the same value Your response should be a single word followed by an
-explanation. 'YES' if the answers are equivalent and 'NO' if they are not.
-Examples:
-A) 7% and 7 are equivalent
-B) 10/2 and 20/4 are equivalent
-C) 3,5,7 and 3,8,9 are not equivalent.
-Ground Truth Answer: {ground_truth}
-Response: {response}
-Judgement (YES or NO): 
-"""
+    an excerpt of the response matches the given gold truth answer. The format or units of
+    the response and gold truth answer might be different. However, you must evaluate if the
+    answers are numerically equivalent/identical. Be extra careful when evaluating fractions,
+    they must simplify to the same value. Your response should be a single word followed by an
+    explanation. 'YES' if the answers are equivalent and 'NO' if they are not.
+    Examples:
+    A) 7% and 7 are equivalent
+    B) 10/2 and 20/4 are equivalent
+    C) 3,5,7 and 3,8,9 are not equivalent.
+    Ground Truth Answer: {ground_truth}
+    Response: {response}
+    My judgement is: 
+    """
 
     results = []
     device = next(model.parameters()).device  # Get the device the model is on
@@ -191,9 +191,9 @@ Judgement (YES or NO):
         for eval_output in eval_outputs:
             eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
             # Extract the judgment part
-            judgment_part = eval_text.split("Judgement (YES or NO):")[-1].strip()
+            judgment_part = eval_text.split("My judgement is: ")[-1].strip()
             eval_texts.append(judgment_part)
-            results.append(1 if judgment_part.upper().startswith('YES') else 0)
+            results.append(1 if "YES" in judgment_part.upper() else 0)
         print(f"eval_texts: {eval_texts}")
         
         # Clear CUDA cache after each batch
