@@ -693,6 +693,76 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
     
     print(f"\nVisualization saved to figures/prediction_correlation_plots.png")
 
+    # Create a new figure for residuals normality plots
+    plt.figure(figsize=(15, 5*n_rows))
+    
+    # Plot for each position
+    for i in range(n_positions):
+        plt.subplot(n_rows, 3, i+1)
+        
+        # Calculate residuals
+        train_residuals = Y_train_np[:, i] - train_pred[:, i]
+        test_residuals = Y_test_np[:, i] - test_pred[:, i]
+        
+        # Create Q-Q plots
+        from scipy import stats
+        
+        # Train residuals
+        sorted_train_residuals = np.sort(train_residuals)
+        train_theoretical_quantiles = stats.norm.ppf(np.linspace(0.01, 0.99, len(train_residuals)))
+        
+        # Test residuals
+        sorted_test_residuals = np.sort(test_residuals)
+        test_theoretical_quantiles = stats.norm.ppf(np.linspace(0.01, 0.99, len(test_residuals)))
+        
+        # Plot Q-Q lines
+        plt.plot(train_theoretical_quantiles, sorted_train_residuals, 'bo', alpha=0.5, markersize=2, label='Train')
+        plt.plot(test_theoretical_quantiles, sorted_test_residuals, 'ro', alpha=0.5, markersize=2, label='Test')
+        
+        # Add reference line
+        min_q = min(train_theoretical_quantiles.min(), test_theoretical_quantiles.min())
+        max_q = max(train_theoretical_quantiles.max(), test_theoretical_quantiles.max())
+        plt.plot([min_q, max_q], [min_q, max_q], 'k:', label='Normal')
+        
+        plt.xlabel('Theoretical Quantiles')
+        plt.ylabel('Sample Quantiles')
+        plt.title(f'Position {i+1} Q-Q Plot\nTrain skew={stats.skew(train_residuals):.3f}\nTest skew={stats.skew(test_residuals):.3f}')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+    
+    # Plot for aggregate residuals
+    plt.subplot(n_rows, 3, n_positions+1)
+    
+    # Calculate aggregate residuals
+    train_residuals_flat = Y_train_flat - train_pred_flat
+    test_residuals_flat = Y_test_flat - test_pred_flat
+    
+    # Create Q-Q plots for aggregate data
+    sorted_train_residuals = np.sort(train_residuals_flat)
+    train_theoretical_quantiles = stats.norm.ppf(np.linspace(0.01, 0.99, len(train_residuals_flat)))
+    
+    sorted_test_residuals = np.sort(test_residuals_flat)
+    test_theoretical_quantiles = stats.norm.ppf(np.linspace(0.01, 0.99, len(test_residuals_flat)))
+    
+    plt.plot(train_theoretical_quantiles, sorted_train_residuals, 'bo', alpha=0.5, markersize=2, label='Train')
+    plt.plot(test_theoretical_quantiles, sorted_test_residuals, 'ro', alpha=0.5, markersize=2, label='Test')
+    
+    min_q = min(train_theoretical_quantiles.min(), test_theoretical_quantiles.min())
+    max_q = max(train_theoretical_quantiles.max(), test_theoretical_quantiles.max())
+    plt.plot([min_q, max_q], [min_q, max_q], 'k:', label='Normal')
+    
+    plt.xlabel('Theoretical Quantiles')
+    plt.ylabel('Sample Quantiles')
+    plt.title(f'All Positions Q-Q Plot\nTrain skew={stats.skew(train_residuals_flat):.3f}\nTest skew={stats.skew(test_residuals_flat):.3f}')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('figures/residuals_normality_plots.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"\nVisualization saved to figures/residuals_normality_plots.png")
+
 
 def main():
     parser = argparse.ArgumentParser(description="MLP test experiment for GSM8K reasoning traces")
