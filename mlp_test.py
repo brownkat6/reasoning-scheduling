@@ -392,6 +392,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                 
                 early_correct_matrix.append(early_correct_flags)
                 trace_results.append({
+                    "dataset": dataset,
                     "question_id": qid,
                     "question_text": q_text,
                     "split": split,
@@ -436,7 +437,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     print(f"Data saved to {output_csv}")
 
 
-def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3):
+def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3, dataset='gsm8k'):
     """
     Train an MLP to predict the early stopping correctness proportions from the hidden state.
     The input is a 1536-dim vector (hidden state) and the output is a vector of length (S/W).
@@ -454,41 +455,60 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3):
     if not os.path.exists(data_dir):
         raise ValueError(f"Data directory {data_dir} not found. Please generate data first.")
     
-    print("Loading and combining all batched data files...")
-    all_dfs = []
+    train_grouped_file = os.path.join(data_dir, f"{dataset}_results_train_grouped.csv")
+    test_grouped_file = os.path.join(data_dir, f"{dataset}_results_test_grouped.csv")
     
-    # Load train split files (0-74)
-    for i in range(75):
-        train_file = os.path.join(data_dir, f"gsm8k_results_train_{i}.csv")
-        if os.path.exists(train_file):
-            try:
-                df = pd.read_csv(train_file)
-                all_dfs.append(df)
-                print(f"Loaded train batch {i}")
-            except Exception as e:
-                print(f"Error loading train batch {i}: {e}")
+    if not os.path.exists(train_grouped_file) or not os.path.exists(test_grouped_file):
+        print("Loading and combining all batched data files...")
+        
+        # Use list comprehension and error handling in a single pass
+        train_files = [os.path.join(data_dir, f"{dataset}_results_train_{i}.csv") for i in range(75)]
+        test_files = [os.path.join(data_dir, f"{dataset}_results_test_{i}.csv") for i in range(14)]
+        
+        # Filter to only existing files
+        train_files = [f for f in train_files if os.path.exists(f)]
+        test_files = [f for f in test_files if os.path.exists(f)]
+        
+        if not train_files and not test_files:
+            raise ValueError(f"No data files found in {data_dir}. Please generate data first.")
+        
+        # Read and concatenate train files in one operation
+        if train_files:
+            print(f"Loading {len(train_files)} train files...")
+            train_grouped = pd.concat(
+                (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in train_files), 
+                ignore_index=True
+            )
+            #train_grouped = train_df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+            train_grouped.to_csv(train_grouped_file, index=False)
+            print(f"Saved grouped train data with {len(train_grouped)} questions")
+        else:
+            train_grouped = pd.DataFrame()
+            
+        # Read and concatenate test files in one operation
+        if test_files:
+            print(f"Loading {len(test_files)} test files...")
+            test_grouped = pd.concat(
+                (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in test_files), 
+                ignore_index=True
+            )
+            #test_grouped = test_df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+            test_grouped.to_csv(test_grouped_file, index=False)
+            print(f"Saved grouped test data with {len(test_grouped)} questions")
+        else:
+            test_grouped = pd.DataFrame()
+    else:
+        print("Loading pre-grouped data files...")
+        train_grouped = pd.read_csv(train_grouped_file)
+        test_grouped = pd.read_csv(test_grouped_file)
     
-    # Load test split files (0-13)
-    for i in range(14):
-        test_file = os.path.join(data_dir, f"gsm8k_results_test_{i}.csv")
-        if os.path.exists(test_file):
-            try:
-                df = pd.read_csv(test_file)
-                all_dfs.append(df)
-                print(f"Loaded test batch {i}")
-            except Exception as e:
-                print(f"Error loading test batch {i}: {e}")
-    
-    if not all_dfs:
-        raise ValueError("No data files found in data/gsm8k_results/. Please generate data first.")
-    
-    # Combine all dataframes
-    df = pd.concat(all_dfs, ignore_index=True)
-    print(f"Combined {len(all_dfs)} data files. Total rows: {len(df)}")
+    grouped = pd.concat([train_grouped, test_grouped], ignore_index=True)
+    print(f"Total rows: {len(grouped)}")
     # print number of unique questions in train and number of unique questions in test
     #print(f"Number of unique questions in train: {df[df['split'] == 'train']['question_id'].nunique()}")
     #print(f"Number of unique questions in test: {df[df['split'] == 'test']['question_id'].nunique()}")
 
+    # Group by question_id, split, question_text and take the first occurrence
     import ast
     def parse_list(x):
         try:
@@ -496,11 +516,8 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3):
         except Exception:
             return x
 
-    df['hidden_state'] = df['hidden_state'].apply(parse_list)
-    df['early_stop_correct_proportions'] = df['early_stop_correct_proportions'].apply(parse_list)
-
-    # Group by question_id, split, question_text and take the first occurrence
-    grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+    grouped['hidden_state'] = grouped['hidden_state'].apply(parse_list)
+    grouped['early_stop_correct_proportions'] = grouped['early_stop_correct_proportions'].apply(parse_list)
 
     X = np.vstack(grouped['hidden_state'].values)  # shape (num_questions, 1536)
     Y = np.vstack(grouped['early_stop_correct_proportions'].values)  # shape (num_questions, output_dim)
