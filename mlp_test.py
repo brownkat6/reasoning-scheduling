@@ -124,6 +124,8 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
         List of 0s and 1s indicating whether each output matches the ground truth
         
     NOTE: judgement template taken from LEARNING HOW HARD TO THINK: INPUT-ADAPTIVE ALLOCATION OF LM COMPUTATION
+    
+    TODO: switch to using Llama-3.1-8B-Instruct with temperature set to 0.1 as our evaluation LM
     """
     print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
     evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
@@ -552,6 +554,82 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
     for i, (mse_val, p_val) in enumerate(zip(mse_test_individual, pearson_test)):
         print(f"Position {i+1}: MSE: {mse_val:.4f}, Pearson: {p_val:.4f}")
 
+    # Create figures directory if it doesn't exist
+    os.makedirs('figures', exist_ok=True)
+    
+    import matplotlib.pyplot as plt
+    from scipy import stats
+    
+    # Calculate number of subplots needed (all positions + 1 for aggregate)
+    n_positions = Y_train_np.shape[1]
+    n_rows = (n_positions + 2) // 3  # 3 plots per row, +2 for ceiling division
+    
+    plt.figure(figsize=(15, 5*n_rows))
+    
+    # Plot for each position
+    for i in range(n_positions):
+        plt.subplot(n_rows, 3, i+1)
+        
+        # Train data
+        slope_train, intercept_train, r_train, _, _ = stats.linregress(train_pred[:, i], Y_train_np[:, i])
+        line_train = slope_train * np.array([0, 1]) + intercept_train
+        
+        # Test data
+        slope_test, intercept_test, r_test, _, _ = stats.linregress(test_pred[:, i], Y_test_np[:, i])
+        line_test = slope_test * np.array([0, 1]) + intercept_test
+        
+        plt.scatter(train_pred[:, i], Y_train_np[:, i], alpha=0.5, label='Train', color='blue')
+        plt.scatter(test_pred[:, i], Y_test_np[:, i], alpha=0.5, label='Test', color='red')
+        
+        plt.plot([0, 1], line_train, color='blue', linestyle='--', alpha=0.8)
+        plt.plot([0, 1], line_test, color='red', linestyle='--', alpha=0.8)
+        
+        plt.xlabel('Predicted Probability')
+        plt.ylabel('Actual Probability')
+        plt.title(f'Position {i+1}\nTrain r={r_train:.3f}, Test r={r_test:.3f}')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Set axis limits
+        plt.xlim(-0.1, 1.1)
+        plt.ylim(-0.1, 1.1)
+    
+    # Plot for aggregate data
+    plt.subplot(n_rows, 3, n_positions+1)
+    
+    # Flatten all predictions and actuals
+    train_pred_flat = train_pred.flatten()
+    test_pred_flat = test_pred.flatten()
+    Y_train_flat = Y_train_np.flatten()
+    Y_test_flat = Y_test_np.flatten()
+    
+    # Compute aggregate correlations
+    slope_train, intercept_train, r_train, _, _ = stats.linregress(train_pred_flat, Y_train_flat)
+    slope_test, intercept_test, r_test, _, _ = stats.linregress(test_pred_flat, Y_test_flat)
+    
+    line_train = slope_train * np.array([0, 1]) + intercept_train
+    line_test = slope_test * np.array([0, 1]) + intercept_test
+    
+    plt.scatter(train_pred_flat, Y_train_flat, alpha=0.5, label='Train', color='blue')
+    plt.scatter(test_pred_flat, Y_test_flat, alpha=0.5, label='Test', color='red')
+    
+    plt.plot([0, 1], line_train, color='blue', linestyle='--', alpha=0.8)
+    plt.plot([0, 1], line_test, color='red', linestyle='--', alpha=0.8)
+    
+    plt.xlabel('Predicted Probability')
+    plt.ylabel('Actual Probability')
+    plt.title(f'All Positions\nTrain r={r_train:.3f}, Test r={r_test:.3f}')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.xlim(-0.1, 1.1)
+    plt.ylim(-0.1, 1.1)
+    
+    plt.tight_layout()
+    plt.savefig('figures/prediction_correlation_plots.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"\nVisualization saved to figures/prediction_correlation_plots.png")
+
 
 def main():
     parser = argparse.ArgumentParser(description="MLP test experiment for GSM8K reasoning traces")
@@ -563,6 +641,8 @@ def main():
     parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
     args = parser.parse_args()
+    
+    args.csv_file = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.csv_file
 
     if args.generate:
         if args.batch_idx is None:
