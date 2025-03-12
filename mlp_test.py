@@ -190,92 +190,102 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         trace_results = []
         early_correct_matrix = []  # aggregate correctness flags per early stopping position
         
-        # Generate all traces at once in a single batch
-        print(f"Generating {num_traces} traces for question {qid}...")
-        inputs_trace = tokenizer([q_text] * num_traces, return_tensors="pt", padding=True).to('cuda')
-        with torch.inference_mode():
-            generated_ids = model.generate(
-                inputs_trace['input_ids'],
-                attention_mask=inputs_trace['attention_mask'],
-                do_sample=True,
-                temperature=0.6,
-                max_new_tokens=S,
-                num_return_sequences=num_traces,
-                pad_token_id=tokenizer.pad_token_id
-            )  # This is on CUDA
-        
-        # Get the length of the input prompt in tokens
-        prompt_length = len(inputs_trace['input_ids'][0])
-        
-        # Process each generated trace
-        for trace_id in range(num_traces):
-            # Get the full reasoning trace, excluding the prompt
-            reasoning_trace = tokenizer.decode(generated_ids[trace_id][prompt_length:], skip_special_tokens=True)
+        # Generate traces in batches of 16
+        trace_batch_size = 16
+        for trace_batch_start in range(0, num_traces, trace_batch_size):
+            trace_batch_end = min(trace_batch_start + trace_batch_size, num_traces)
+            batch_size_actual = trace_batch_end - trace_batch_start
+            print(f"Generating traces {trace_batch_start} to {trace_batch_end-1} for question {qid}...")
             
-            early_generated_answers = []
-            early_extracted_answers = []
-            early_correct_flags = []
+            # Create inputs for this batch of traces
+            inputs_trace = tokenizer([q_text] * batch_size_actual, return_tensors="pt", padding=True).to('cuda')
+            with torch.inference_mode():
+                batch_generated_ids = model.generate(
+                    inputs_trace['input_ids'],
+                    attention_mask=inputs_trace['attention_mask'],
+                    do_sample=True,
+                    temperature=0.6,
+                    max_new_tokens=S,
+                    num_return_sequences=batch_size_actual,
+                    pad_token_id=tokenizer.pad_token_id
+                )  # This is on CUDA
             
-            # Tokenize the full reasoning trace once and keep on GPU
-            trace_ids = tokenizer(reasoning_trace, return_tensors="pt").to('cuda').input_ids[0]
+            # Get the length of the input prompt in tokens
+            prompt_length = len(inputs_trace['input_ids'][0])
             
-            # Process early stopping positions in batches
-            batch_size = 16  # Process 16 positions at a time
-            for i in range(0, len(early_stopping_positions), batch_size): 
-                batch_positions = early_stopping_positions[i:i + batch_size]
-                batch_prompts = []
+            # Process each generated trace in this batch
+            for batch_idx in range(batch_size_actual):
+                trace_id = trace_batch_start + batch_idx
+                # Get the full reasoning trace, excluding the prompt
+                reasoning_trace = tokenizer.decode(batch_generated_ids[batch_idx][prompt_length:], skip_special_tokens=True)
                 
-                # Create prompts for each position in the batch
-                for pos in batch_positions:
-                    # Get only the first 'pos' tokens of the generated trace (stays on GPU)
-                    effective_pos = pos if pos < len(trace_ids) else len(trace_ids)
-                    partial_generated = trace_ids[:effective_pos]  # Still on GPU
+                early_generated_answers = []
+                early_extracted_answers = []
+                early_correct_flags = []
+                
+                # Tokenize the full reasoning trace once and keep on GPU
+                trace_ids = tokenizer(reasoning_trace, return_tensors="pt").to('cuda').input_ids[0]
+                
+                # Process early stopping positions in batches
+                early_batch_size = 16  # Process 16 positions at a time
+                for i in range(0, len(early_stopping_positions), early_batch_size): 
+                    batch_positions = early_stopping_positions[i:i + early_batch_size]
+                    batch_prompts = []
                     
-                    # Only decode to CPU when needed for string operations
-                    partial_text = q_text + tokenizer.decode(partial_generated.cpu(), skip_special_tokens=True)
-                    suffix = "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n[\\boxed{"
-                    prompt = partial_text + suffix
-                    batch_prompts.append(prompt)
-                
-                # Tokenize all prompts in the batch at once and keep on GPU
-                batch_inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True).to('cuda')
-                
-                # Generate answers for all prompts in the batch (stays on GPU)
-                with torch.inference_mode():
-                    batch_outputs = model.generate(
-                        batch_inputs.input_ids,
-                        attention_mask=batch_inputs.attention_mask,
-                        max_new_tokens=50,
-                        pad_token_id=tokenizer.pad_token_id,
-                        num_return_sequences=1
-                    )
-                
-                # Only move to CPU when needed for string processing
-                for j, output_ids in enumerate(batch_outputs):
-                    forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
-                    early_generated_answers.append(forced_text)
-                    extracted = extract_numerical_answer(forced_text)
-                    early_extracted_answers.append(extracted)
-                    try:
-                        if float(extracted) == float(q_answer):
-                            early_correct_flags.append(1)
-                        else:
+                    # Create prompts for each position in the batch
+                    for pos in batch_positions:
+                        # Get only the first 'pos' tokens of the generated trace (stays on GPU)
+                        effective_pos = pos if pos < len(trace_ids) else len(trace_ids)
+                        partial_generated = trace_ids[:effective_pos]  # Still on GPU
+                        
+                        # Only decode to CPU when needed for string operations
+                        partial_text = q_text + tokenizer.decode(partial_generated.cpu(), skip_special_tokens=True)
+                        suffix = "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n[\\boxed{"
+                        prompt = partial_text + suffix
+                        batch_prompts.append(prompt)
+                    
+                    # Tokenize all prompts in the batch at once and keep on GPU
+                    batch_inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True).to('cuda')
+                    
+                    # Generate answers for all prompts in the batch (stays on GPU)
+                    with torch.inference_mode():
+                        batch_outputs = model.generate(
+                            batch_inputs.input_ids,
+                            attention_mask=batch_inputs.attention_mask,
+                            max_new_tokens=50,
+                            pad_token_id=tokenizer.pad_token_id,
+                            num_return_sequences=1
+                        )
+                    
+                    # Only move to CPU when needed for string processing
+                    for j, output_ids in enumerate(batch_outputs):
+                        forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
+                        early_generated_answers.append(forced_text)
+                        extracted = extract_numerical_answer(forced_text)
+                        early_extracted_answers.append(extracted)
+                        try:
+                            if float(extracted) == float(q_answer):
+                                early_correct_flags.append(1)
+                            else:
+                                early_correct_flags.append(0)
+                        except Exception:
                             early_correct_flags.append(0)
-                    except Exception:
-                        early_correct_flags.append(0)
-            
-            early_correct_matrix.append(early_correct_flags)
-            trace_results.append({
-                "question_id": qid,
-                "question_text": q_text,
-                "split": split,
-                "hidden_state": hidden_state_tensor.cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
-                "trace_id": trace_id,
-                "reasoning_trace": reasoning_trace,
-                "early_generated_answers": early_generated_answers,
-                "early_extracted_answers": early_extracted_answers
-                # early_stop_correct_proportions will be added later
-            })
+                
+                early_correct_matrix.append(early_correct_flags)
+                trace_results.append({
+                    "question_id": qid,
+                    "question_text": q_text,
+                    "split": split,
+                    "hidden_state": hidden_state_tensor.cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
+                    "trace_id": trace_id,
+                    "reasoning_trace": reasoning_trace,
+                    "early_generated_answers": early_generated_answers,
+                    "early_extracted_answers": early_extracted_answers
+                    # early_stop_correct_proportions will be added later
+                })
+                
+            # Clear CUDA cache after each batch of traces
+            torch.cuda.empty_cache()
         
         # Compute shared early stopping correctness proportions for this question
         early_correct_proportions = np.mean(early_correct_matrix, axis=0).tolist()
