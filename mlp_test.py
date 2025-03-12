@@ -559,8 +559,8 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
             x = self.relu(x)
             x = self.fc2(x)
             return x
-
-    model_mlp = MLP(input_dim=1536, hidden_dim=128, output_dim=Y.shape[1]).to('cuda')  # Move model to CUDA
+    
+    model_mlp = MLP(input_dim=1536, hidden_dim=256, output_dim=Y.shape[1]).to('cuda')  # Move model to CUDA
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model_mlp.parameters(), lr=learning_rate)
 
