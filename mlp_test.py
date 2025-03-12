@@ -125,7 +125,7 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
         
     NOTE: judgement template taken from LEARNING HOW HARD TO THINK: INPUT-ADAPTIVE ALLOCATION OF LM COMPUTATION
     """
-    print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
+    # print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
     evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
 an excerpt of the response matches the given gold truth answer. The format or units of
 the response and gold truth answer might be different. However, you must evaluate if the
@@ -335,7 +335,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                         batch_outputs = model.generate(
                             batch_inputs.input_ids,
                             attention_mask=batch_inputs.attention_mask,
-                            max_new_tokens=50,
+                            max_new_tokens=30,
                             pad_token_id=tokenizer.pad_token_id,
                             num_return_sequences=1
                         )
@@ -556,6 +556,7 @@ def main():
     parser.add_argument("--split", type=str, choices=['train', 'test'], help="Which split to process (required with --generate)")
     parser.add_argument("--csv_file", type=str, default="gsm8k_results.csv", help="CSV file to load/save generated data")
     parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500'], help="Which dataset to use")
+    parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
     args = parser.parse_args()
 
     if args.generate:
@@ -563,7 +564,7 @@ def main():
             parser.error("--batch_idx is required when using --generate")
         if args.split is None:
             parser.error("--split is required when using --generate")
-        generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=args.csv_file, dataset=args.dataset)
+        generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=args.csv_file, dataset=args.dataset, S=args.S)
     elif args.train:
         train_mlp(csv_file=args.csv_file)
     else:
