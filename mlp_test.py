@@ -133,7 +133,7 @@ they must simplify to the same value Your response should be a single word follo
 explanation. 'YES' if the answers are equivalent and 'NO' if they are not.
 Examples:
 A) 7% and 7 are equivalent
-B) frac{10}{2} and frac {20}{4} are equivalent.
+B) 10/2 and 20/4 are equivalent
 C) 3,5,7 and 3,8,9 are not equivalent.
 Ground Truth Answer: {ground_truth}
 Response: {response}"""
@@ -146,13 +146,7 @@ Response: {response}"""
         current_batch = batch_outputs[i:batch_end]
         
         # Create prompts for current batch
-        prompts = [
-            evaluation_template.format(
-                ground_truth=ground_truth,
-                response=output
-            )
-            for output in current_batch
-        ]
+        prompts = [evaluation_template.format(ground_truth=ground_truth, response=output) for output in current_batch]
         
         # Tokenize all prompts in batch
         inputs = tokenizer(prompts, return_tensors="pt", padding=True).to('cuda')
