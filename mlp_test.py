@@ -678,6 +678,7 @@ def main():
             parser.error("--split is required when using --generate")
         generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file, dataset=args.dataset, S=args.S)
     elif args.train:
+        print(f"Training MLP on data in {data_dir}")
         train_mlp(data_dir=data_dir)
     else:
         print("Please specify --generate or --train.")
