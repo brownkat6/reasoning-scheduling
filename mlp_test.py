@@ -144,9 +144,35 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
 
+    # Move model to GPU once
+    model = model.to('cuda')
+
     early_stopping_positions = list(range(W, S + 1, W))  # e.g., 16, 32, ... 4096
 
-    for question in batch_questions:
+    # Pre-compute hidden states for all questions in batch at once
+    print("Computing hidden states for all questions in batch...")
+    batch_texts = [q['question'] + " <think>" for q in batch_questions if q['id'] not in completed_question_ids]
+    if not batch_texts:  # Skip if all questions are completed
+        print("All questions in batch already completed")
+        return
+        
+    batch_inputs = tokenizer(batch_texts, return_tensors="pt", padding=True).to('cuda')
+    with torch.inference_mode():
+        batch_outputs = model(**batch_inputs, output_hidden_states=True)
+    batch_hidden_states = batch_outputs.hidden_states[-1][:, -1, :].detach()  # Shape: [batch_size, 1536]
+    print(f"Finished computing hidden states for all questions in batch")
+    # Assert hidden states have correct dimensions
+    assert batch_hidden_states.shape[1] == 1536, f"Hidden state dimension is {batch_hidden_states.shape[1]}, expected 1536"
+    
+    # Create mapping from question to its hidden state
+    hidden_states_map = {}
+    current_idx = 0
+    for q in batch_questions:
+        if q['id'] not in completed_question_ids:
+            hidden_states_map[q['id']] = batch_hidden_states[current_idx]
+            current_idx += 1
+
+    for question_idx, question in enumerate(batch_questions):
         qid = question['id']
         
         # Skip if question is already completed
@@ -158,62 +184,64 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         q_answer = question['answer']
         print(f"Processing question {qid} from {split} split...")
         
-        # Obtain hidden state from the model's first forward pass
-        inputs = tokenizer(q_text, return_tensors="pt")
-        with torch.no_grad():
-            outputs = model(**inputs, output_hidden_states=True)
-        hidden_state_tensor = outputs.hidden_states[-1][0, -1, :]
-        hidden_state = hidden_state_tensor.detach().cpu().numpy().tolist()
-        
-        # Assert hidden state has 1536 dimensions
-        assert len(hidden_state) == 1536, f"Hidden state dimension is {len(hidden_state)}, expected 1536"
+        # Get pre-computed hidden state for this question
+        hidden_state_tensor = hidden_states_map[qid]  # Already on GPU
         
         trace_results = []
         early_correct_matrix = []  # aggregate correctness flags per early stopping position
         
-        for trace_id in range(num_traces): 
-            # Generate reasoning trace using model generation
-            inputs_trace = tokenizer(q_text, return_tensors="pt")
-            with torch.no_grad():
-                generated_ids = model.generate(inputs_trace['input_ids'], do_sample=True, temperature=0.6, max_new_tokens=S)
-            
-            # Get the length of the input prompt in tokens
-            prompt_length = len(inputs_trace['input_ids'][0])
-            
+        # Generate all traces at once in a single batch
+        print(f"Generating {num_traces} traces for question {qid}...")
+        inputs_trace = tokenizer([q_text] * num_traces, return_tensors="pt", padding=True).to('cuda')
+        with torch.inference_mode():
+            generated_ids = model.generate(
+                inputs_trace['input_ids'],
+                attention_mask=inputs_trace['attention_mask'],
+                do_sample=True,
+                temperature=0.6,
+                max_new_tokens=S,
+                num_return_sequences=num_traces,
+                pad_token_id=tokenizer.pad_token_id
+            )  # This is on CUDA
+        
+        # Get the length of the input prompt in tokens
+        prompt_length = len(inputs_trace['input_ids'][0])
+        
+        # Process each generated trace
+        for trace_id in range(num_traces):
             # Get the full reasoning trace, excluding the prompt
-            reasoning_trace = tokenizer.decode(generated_ids[0][prompt_length:], skip_special_tokens=True)
+            reasoning_trace = tokenizer.decode(generated_ids[trace_id][prompt_length:], skip_special_tokens=True)
             
             early_generated_answers = []
             early_extracted_answers = []
             early_correct_flags = []
             
-            # Tokenize the full reasoning trace once
-            trace_ids = tokenizer(reasoning_trace, return_tensors="pt").input_ids[0]
+            # Tokenize the full reasoning trace once and keep on GPU
+            trace_ids = tokenizer(reasoning_trace, return_tensors="pt").to('cuda').input_ids[0]
             
             # Process early stopping positions in batches
             batch_size = 16  # Process 16 positions at a time
             for i in range(0, len(early_stopping_positions), batch_size): 
-                print(f"Processing batch {i//batch_size} of {len(early_stopping_positions)//batch_size}")
                 batch_positions = early_stopping_positions[i:i + batch_size]
                 batch_prompts = []
                 
                 # Create prompts for each position in the batch
                 for pos in batch_positions:
-                    # Get only the first 'pos' tokens of the generated trace
+                    # Get only the first 'pos' tokens of the generated trace (stays on GPU)
                     effective_pos = pos if pos < len(trace_ids) else len(trace_ids)
-                    partial_generated = trace_ids[:effective_pos]
+                    partial_generated = trace_ids[:effective_pos]  # Still on GPU
                     
-                    # Combine prompt with the partial generated text
-                    partial_text = q_text + tokenizer.decode(partial_generated, skip_special_tokens=True)
+                    # Only decode to CPU when needed for string operations
+                    partial_text = q_text + tokenizer.decode(partial_generated.cpu(), skip_special_tokens=True)
                     suffix = "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n[\\boxed{"
                     prompt = partial_text + suffix
                     batch_prompts.append(prompt)
                 
-                # Tokenize all prompts in the batch at once
-                batch_inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True)
+                # Tokenize all prompts in the batch at once and keep on GPU
+                batch_inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True).to('cuda')
                 
-                # Generate answers for all prompts in the batch
-                with torch.no_grad():
+                # Generate answers for all prompts in the batch (stays on GPU)
+                with torch.inference_mode():
                     batch_outputs = model.generate(
                         batch_inputs.input_ids,
                         attention_mask=batch_inputs.attention_mask,
@@ -222,9 +250,9 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                         num_return_sequences=1
                     )
                 
-                # Process each output in the batch
+                # Only move to CPU when needed for string processing
                 for j, output_ids in enumerate(batch_outputs):
-                    forced_text = tokenizer.decode(output_ids, skip_special_tokens=True)
+                    forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
                     early_generated_answers.append(forced_text)
                     extracted = extract_numerical_answer(forced_text)
                     early_extracted_answers.append(extracted)
@@ -241,7 +269,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                 "question_id": qid,
                 "question_text": q_text,
                 "split": split,
-                "hidden_state": hidden_state,
+                "hidden_state": hidden_state_tensor.cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
                 "trace_id": trace_id,
                 "reasoning_trace": reasoning_trace,
                 "early_generated_answers": early_generated_answers,
@@ -261,7 +289,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
             print(f"Question ID: {qid}")
             print(f"Question text: {q_text}")
             print(f"Ground truth answer: {q_answer}")
-            print(f"Hidden state dimension: {len(hidden_state)}")
+            print(f"Hidden state dimension: {hidden_state_tensor.shape[0]}")
             print(f"Number of traces generated: {len(trace_results)}")
             print(f"Early stopping positions: {early_stopping_positions}")
             print(f"Average correctness at each position: {early_correct_proportions}")
@@ -358,14 +386,14 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
             x = self.fc2(x)
             return x
 
-    model_mlp = MLP(input_dim=1536, hidden_dim=128, output_dim=Y.shape[1])
+    model_mlp = MLP(input_dim=1536, hidden_dim=128, output_dim=Y.shape[1]).to('cuda')  # Move model to CUDA
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model_mlp.parameters(), lr=learning_rate)
 
-    X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-    Y_train_tensor = torch.tensor(Y_train, dtype=torch.float32)
-    X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-    Y_test_tensor = torch.tensor(Y_test, dtype=torch.float32)
+    X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to('cuda')
+    Y_train_tensor = torch.tensor(Y_train, dtype=torch.float32).to('cuda')
+    X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to('cuda')
+    Y_test_tensor = torch.tensor(Y_test, dtype=torch.float32).to('cuda')
 
     train_dataset = torch.utils.data.TensorDataset(X_train_tensor, Y_train_tensor)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -375,6 +403,7 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
         model_mlp.train()
         running_loss = 0.0
         for batch_X, batch_Y in train_loader:
+            # No need to move batches to cuda since the dataset tensors are already on cuda
             optimizer.zero_grad()
             outputs = model_mlp(batch_X)
             loss = criterion(outputs, batch_Y)
@@ -386,19 +415,23 @@ def train_mlp(csv_file='gsm8k_results.csv', num_epochs=10, batch_size=4, learnin
 
     model_mlp.eval()
     with torch.no_grad():
-        train_pred = model_mlp(X_train_tensor).cpu().numpy()
-        test_pred = model_mlp(X_test_tensor).cpu().numpy()
+        train_pred = model_mlp(X_train_tensor).cpu().numpy()  # Only move to CPU for final numpy conversion
+        test_pred = model_mlp(X_test_tensor).cpu().numpy()  # Only move to CPU for final numpy conversion
 
-    mse_train_overall = np.mean((train_pred - Y_train)**2)
-    mse_test_overall = np.mean((test_pred - Y_test)**2)
+    # Move Y tensors to CPU only when needed for numpy operations
+    Y_train_np = Y_train_tensor.cpu().numpy()
+    Y_test_np = Y_test_tensor.cpu().numpy()
+
+    mse_train_overall = np.mean((train_pred - Y_train_np)**2)
+    mse_test_overall = np.mean((test_pred - Y_test_np)**2)
     print(f"Overall MSE on train: {mse_train_overall:.4f}")
     print(f"Overall MSE on test: {mse_test_overall:.4f}")
 
-    mse_train_individual = np.mean((train_pred - Y_train)**2, axis=0)
-    mse_test_individual = np.mean((test_pred - Y_test)**2, axis=0)
+    mse_train_individual = np.mean((train_pred - Y_train_np)**2, axis=0)
+    mse_test_individual = np.mean((test_pred - Y_test_np)**2, axis=0)
 
-    pearson_train = [pearsonr(train_pred[:, i], Y_train[:, i])[0] for i in range(Y_train.shape[1])]
-    pearson_test = [pearsonr(test_pred[:, i], Y_test[:, i])[0] for i in range(Y_test.shape[1])]
+    pearson_train = [pearsonr(train_pred[:, i], Y_train_np[:, i])[0] for i in range(Y_train_np.shape[1])]
+    pearson_test = [pearsonr(test_pred[:, i], Y_test_np[:, i])[0] for i in range(Y_test_np.shape[1])]
 
     print("\nEarly stopping position-wise MSE and Pearson correlation (Train):")
     for i, (mse_val, p_val) in enumerate(zip(mse_train_individual, pearson_train)):
