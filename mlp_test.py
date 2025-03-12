@@ -597,18 +597,29 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
     Y_train_np = Y_train_tensor.cpu().numpy()
     Y_test_np = Y_test_tensor.cpu().numpy()
 
-    # Calculate mean predictions from training set for each position
+    # Calculate mean predictions from both training and test sets for each position
     train_means = np.mean(Y_train_np, axis=0)  # Shape: (num_positions,)
+    test_means = np.mean(Y_test_np, axis=0)    # Shape: (num_positions,)
     
-    # Create baseline predictions by repeating the means
+    # Create baseline predictions using train means
     baseline_train_pred = np.tile(train_means, (Y_train_np.shape[0], 1))  # Shape: (train_size, num_positions)
-    baseline_test_pred = np.tile(train_means, (Y_test_np.shape[0], 1))   # Shape: (test_size, num_positions)
+    baseline_test_pred = np.tile(train_means, (Y_test_np.shape[0], 1))    # Shape: (test_size, num_positions)
     
-    # Calculate MSE for both model and baseline
+    # Create baseline predictions using test means
+    baseline_train_pred_test_means = np.tile(test_means, (Y_train_np.shape[0], 1))  # Shape: (train_size, num_positions)
+    baseline_test_pred_test_means = np.tile(test_means, (Y_test_np.shape[0], 1))    # Shape: (test_size, num_positions)
+    
+    # Calculate MSE for model and both baselines
     mse_train_overall = np.mean((train_pred - Y_train_np)**2)
     mse_test_overall = np.mean((test_pred - Y_test_np)**2)
+    
+    # MSE for train means baseline
     baseline_mse_train = np.mean((baseline_train_pred - Y_train_np)**2)
     baseline_mse_test = np.mean((baseline_test_pred - Y_test_np)**2)
+    
+    # MSE for test means baseline
+    baseline_mse_train_test_means = np.mean((baseline_train_pred_test_means - Y_train_np)**2)
+    baseline_mse_test_test_means = np.mean((baseline_test_pred_test_means - Y_test_np)**2)
     
     print("\nModel Performance:")
     print(f"Overall MSE on train: {mse_train_overall:.4f}")
@@ -618,14 +629,34 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
     print(f"Overall MSE on train: {baseline_mse_train:.4f}")
     print(f"Overall MSE on test: {baseline_mse_test:.4f}")
     
-    # Calculate relative improvement over baseline
+    print("\nBaseline Performance (Predicting Test Means):")
+    print(f"Overall MSE on train: {baseline_mse_train_test_means:.4f}")
+    print(f"Overall MSE on test: {baseline_mse_test_test_means:.4f}")
+    
+    # Calculate relative improvement over train means baseline
     train_improvement = ((baseline_mse_train - mse_train_overall) / baseline_mse_train) * 100
     test_improvement = ((baseline_mse_test - mse_test_overall) / baseline_mse_test) * 100
     
-    print("\nRelative Improvement Over Baseline:")
+    # Calculate relative improvement over test means baseline
+    train_improvement_test_means = ((baseline_mse_train_test_means - mse_train_overall) / baseline_mse_train_test_means) * 100
+    test_improvement_test_means = ((baseline_mse_test_test_means - mse_test_overall) / baseline_mse_test_test_means) * 100
+    
+    print("\nRelative Improvement Over Train Means Baseline:")
     print(f"Train improvement: {train_improvement:.1f}%")
     print(f"Test improvement: {test_improvement:.1f}%")
     
+    print("\nRelative Improvement Over Test Means Baseline:")
+    print(f"Train improvement: {train_improvement_test_means:.1f}%")
+    print(f"Test improvement: {test_improvement_test_means:.1f}%")
+
+    # Also print out the means themselves for comparison
+    print("\nMean Values:")
+    print("Position  Train_Mean  Test_Mean   Diff")
+    print("-" * 45)
+    for i, (train_mean, test_mean) in enumerate(zip(train_means, test_means)):
+        diff = abs(train_mean - test_mean)
+        print(f"{i+1:8d}  {train_mean:.4f}     {test_mean:.4f}     {diff:.4f}")
+
     mse_train_individual = np.mean((train_pred - Y_train_np)**2, axis=0)
     mse_test_individual = np.mean((test_pred - Y_test_np)**2, axis=0)
 
