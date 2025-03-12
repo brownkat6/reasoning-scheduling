@@ -137,7 +137,9 @@ A) 7% and 7 are equivalent
 B) 10/2 and 20/4 are equivalent
 C) 3,5,7 and 3,8,9 are not equivalent.
 Ground Truth Answer: {ground_truth}
-Response: {response}"""
+Response: {response}
+Judgement (YES or NO): 
+"""
 
     results = []
     
@@ -168,7 +170,7 @@ Response: {response}"""
         for eval_output in eval_outputs:
             eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
             # Check if the response starts with 'YES'
-            eval_texts.append(eval_text)
+            eval_texts.append(eval_text.split("Judgement (YES or NO):")[1].strip())
             results.append(1 if eval_text.strip().upper().startswith('YES') else 0)
         print(f"eval_texts: {eval_texts}")
         
