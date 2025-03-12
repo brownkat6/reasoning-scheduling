@@ -597,10 +597,34 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
     Y_train_np = Y_train_tensor.cpu().numpy()
     Y_test_np = Y_test_tensor.cpu().numpy()
 
+    # Calculate mean predictions from training set for each position
+    train_means = np.mean(Y_train_np, axis=0)  # Shape: (num_positions,)
+    
+    # Create baseline predictions by repeating the means
+    baseline_train_pred = np.tile(train_means, (Y_train_np.shape[0], 1))  # Shape: (train_size, num_positions)
+    baseline_test_pred = np.tile(train_means, (Y_test_np.shape[0], 1))   # Shape: (test_size, num_positions)
+    
+    # Calculate MSE for both model and baseline
     mse_train_overall = np.mean((train_pred - Y_train_np)**2)
     mse_test_overall = np.mean((test_pred - Y_test_np)**2)
+    baseline_mse_train = np.mean((baseline_train_pred - Y_train_np)**2)
+    baseline_mse_test = np.mean((baseline_test_pred - Y_test_np)**2)
+    
+    print("\nModel Performance:")
     print(f"Overall MSE on train: {mse_train_overall:.4f}")
     print(f"Overall MSE on test: {mse_test_overall:.4f}")
+    
+    print("\nBaseline Performance (Predicting Train Means):")
+    print(f"Overall MSE on train: {baseline_mse_train:.4f}")
+    print(f"Overall MSE on test: {baseline_mse_test:.4f}")
+    
+    # Calculate relative improvement over baseline
+    train_improvement = ((baseline_mse_train - mse_train_overall) / baseline_mse_train) * 100
+    test_improvement = ((baseline_mse_test - mse_test_overall) / baseline_mse_test) * 100
+    
+    print("\nRelative Improvement Over Baseline:")
+    print(f"Train improvement: {train_improvement:.1f}%")
+    print(f"Test improvement: {test_improvement:.1f}%")
     
     mse_train_individual = np.mean((train_pred - Y_train_np)**2, axis=0)
     mse_test_individual = np.mean((test_pred - Y_test_np)**2, axis=0)
