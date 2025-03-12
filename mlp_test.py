@@ -154,7 +154,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
             print(f"Skipping completed question {qid}")
             continue
             
-        q_text = question['question']
+        q_text = question['question']+" <think>"
         q_answer = question['answer']
         print(f"Processing question {qid} from {split} split...")
         
@@ -176,37 +176,65 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=4096, output
             inputs_trace = tokenizer(q_text, return_tensors="pt")
             with torch.no_grad():
                 generated_ids = model.generate(inputs_trace['input_ids'], do_sample=True, temperature=0.6, max_new_tokens=S)
-            reasoning_trace = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+            
+            # Get the length of the input prompt in tokens
+            prompt_length = len(inputs_trace['input_ids'][0])
+            
+            # Get the full reasoning trace, excluding the prompt
+            reasoning_trace = tokenizer.decode(generated_ids[0][prompt_length:], skip_special_tokens=True)
             
             early_generated_answers = []
             early_extracted_answers = []
             early_correct_flags = []
             
-            # For each early stopping position, force answer generation
-            for pos in early_stopping_positions:
-                # Tokenize the reasoning trace to get token ids
-                trace_ids = tokenizer(reasoning_trace, return_tensors="pt").input_ids[0]
-                effective_pos = pos if pos < len(trace_ids) else len(trace_ids)
-                partial_ids = trace_ids[:effective_pos]
-                partial_text = tokenizer.decode(partial_ids, skip_special_tokens=True)
-                suffix = "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n[\\boxed{"
-                prompt = partial_text + suffix
-                forced_ids = tokenizer(prompt, return_tensors="pt").input_ids
-                with torch.no_grad():
-                    forced_output = model.generate(forced_ids, max_new_tokens=50)
-                forced_text = tokenizer.decode(forced_output[0], skip_special_tokens=True)
-                forced_answer = forced_text
+            # Tokenize the full reasoning trace once
+            trace_ids = tokenizer(reasoning_trace, return_tensors="pt").input_ids[0]
+            
+            # Process early stopping positions in batches
+            batch_size = 16  # Process 16 positions at a time
+            for i in range(0, len(early_stopping_positions), batch_size):
+                print(f"Processing batch {i} of {len(early_stopping_positions)//batch_size}")
+                batch_positions = early_stopping_positions[i:i + batch_size]
+                batch_prompts = []
                 
-                early_generated_answers.append(forced_answer)
-                extracted = extract_numerical_answer(forced_answer)
-                early_extracted_answers.append(extracted)
-                try:
-                    if float(extracted) == float(q_answer):
-                        early_correct_flags.append(1)
-                    else:
+                # Create prompts for each position in the batch
+                for pos in batch_positions:
+                    # Get only the first 'pos' tokens of the generated trace
+                    effective_pos = pos if pos < len(trace_ids) else len(trace_ids)
+                    partial_generated = trace_ids[:effective_pos]
+                    
+                    # Combine prompt with the partial generated text
+                    partial_text = q_text + tokenizer.decode(partial_generated, skip_special_tokens=True)
+                    suffix = "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n[\\boxed{"
+                    prompt = partial_text + suffix
+                    batch_prompts.append(prompt)
+                
+                # Tokenize all prompts in the batch at once
+                batch_inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True)
+                
+                # Generate answers for all prompts in the batch
+                with torch.no_grad():
+                    batch_outputs = model.generate(
+                        batch_inputs.input_ids,
+                        attention_mask=batch_inputs.attention_mask,
+                        max_new_tokens=50,
+                        pad_token_id=tokenizer.pad_token_id,
+                        num_return_sequences=1
+                    )
+                
+                # Process each output in the batch
+                for j, output_ids in enumerate(batch_outputs):
+                    forced_text = tokenizer.decode(output_ids, skip_special_tokens=True)
+                    early_generated_answers.append(forced_text)
+                    extracted = extract_numerical_answer(forced_text)
+                    early_extracted_answers.append(extracted)
+                    try:
+                        if float(extracted) == float(q_answer):
+                            early_correct_flags.append(1)
+                        else:
+                            early_correct_flags.append(0)
+                    except Exception:
                         early_correct_flags.append(0)
-                except Exception:
-                    early_correct_flags.append(0)
             
             early_correct_matrix.append(early_correct_flags)
             trace_results.append({
