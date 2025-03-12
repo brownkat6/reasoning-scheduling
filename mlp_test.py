@@ -125,7 +125,7 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
         
     NOTE: judgement template taken from LEARNING HOW HARD TO THINK: INPUT-ADAPTIVE ALLOCATION OF LM COMPUTATION
     """
-    # print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
+    print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
     evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
 an excerpt of the response matches the given gold truth answer. The format or units of
 the response and gold truth answer might be different. However, you must evaluate if the
@@ -164,10 +164,13 @@ Response: {response}"""
             )
         
         # Process each evaluation output
+        eval_texts = []
         for eval_output in eval_outputs:
             eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
             # Check if the response starts with 'YES'
+            eval_texts.append(eval_text)
             results.append(1 if eval_text.strip().upper().startswith('YES') else 0)
+        print(f"eval_texts: {eval_texts}")
         
         # Clear CUDA cache after each batch
         torch.cuda.empty_cache()
