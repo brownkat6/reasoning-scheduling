@@ -89,8 +89,8 @@ def get_judge_model_and_tokenizer():
     """
     model_name = "meta-llama/Llama-3.1-8B-Instruct"
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
-        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers",device_map="auto")
+        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers",device_map="auto")
         
         # Set padding token to be the same as EOS token
         tokenizer.pad_token = tokenizer.eos_token
@@ -178,8 +178,8 @@ Judgement (YES or NO):
         # Generate evaluations for the batch
         with torch.inference_mode():
             eval_outputs = model.generate(
-                inputs.input_ids,
-                attention_mask=inputs.attention_mask,
+                inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
                 max_new_tokens=10,
                 pad_token_id=tokenizer.pad_token_id,
                 num_return_sequences=1,
