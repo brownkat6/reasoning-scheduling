@@ -461,17 +461,23 @@ def train_mlp(data_dir='', num_epochs=10, batch_size=4, learning_rate=1e-3):
     for i in range(75):
         train_file = os.path.join(data_dir, f"gsm8k_results_train_{i}.csv")
         if os.path.exists(train_file):
-            df = pd.read_csv(train_file)
-            all_dfs.append(df)
-            print(f"Loaded train batch {i}")
+            try:
+                df = pd.read_csv(train_file)
+                all_dfs.append(df)
+                print(f"Loaded train batch {i}")
+            except Exception as e:
+                print(f"Error loading train batch {i}: {e}")
     
     # Load test split files (0-13)
     for i in range(14):
         test_file = os.path.join(data_dir, f"gsm8k_results_test_{i}.csv")
         if os.path.exists(test_file):
-            df = pd.read_csv(test_file)
-            all_dfs.append(df)
-            print(f"Loaded test batch {i}")
+            try:
+                df = pd.read_csv(test_file)
+                all_dfs.append(df)
+                print(f"Loaded test batch {i}")
+            except Exception as e:
+                print(f"Error loading test batch {i}: {e}")
     
     if not all_dfs:
         raise ValueError("No data files found in data/gsm8k_results/. Please generate data first.")
