@@ -125,6 +125,7 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
         
     NOTE: judgement template taken from LEARNING HOW HARD TO THINK: INPUT-ADAPTIVE ALLOCATION OF LM COMPUTATION
     """
+    print(f"evaluate_answers_with_llm: {ground_truth}, {batch_outputs}")
     evaluation_template = """You are a math evaluation agent. You are tasked with evaluating if the final answer from
 an excerpt of the response matches the given gold truth answer. The format or units of
 the response and gold truth answer might be different. However, you must evaluate if the
