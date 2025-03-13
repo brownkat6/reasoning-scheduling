@@ -54,7 +54,7 @@ def load_numina_dataset(split='test'):
     
     NOTE: there is also a train set with like 800K samples but I'm not using it for now
     """
-    ds = load_dataset("AI-MO/NuminaMath-CoT", split=split, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/datasets")
+    ds = load_dataset("AI-MO/NuminaMath-CoT", split=split, cache_dir="/n/netscratch/dwork_lab/Lab/katrina/datasets")
     if split == 'train':
         # truncate to first 2000 entries
         ds = ds.select(range(2000))
