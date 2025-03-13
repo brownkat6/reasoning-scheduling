@@ -64,6 +64,8 @@ def load_numina_dataset():
         ground_truth = answer_field.split("boxed{")[1].strip()
         if "}$" in ground_truth:
             ground_truth = ground_truth.split("}$")[0]
+        elif ground_truth.endswith("}]"):
+            ground_truth = ground_truth[:-2]
         elif ground_truth[-1] == "}":
             ground_truth = ground_truth[:-1]
         if len(ground_truth) > 6:
