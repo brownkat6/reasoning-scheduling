@@ -152,10 +152,10 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     explanation. 'Are these answers equivalent? YES' if the answers are equivalent and 'Are these answers equivalent? NO' if they are not.
     Ground Truth Answer: 10/2
     Response: 20/4
-    Are these answers equivalent? YES
+    Are these answers equivalent? YES, because 10/2 = 5 and 20/4 = 5
     Ground Truth Answer: 10/2
     Response: 20/5
-    Are these answers equivalent? NO
+    Are these answers equivalent? NO, because 10/2 = 5 and 20/5 = 4
     Ground Truth Answer: {ground_truth}
     Response: {response}
     Are these answers equivalent? 
