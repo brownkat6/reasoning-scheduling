@@ -414,12 +414,28 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             num_return_sequences=1
                         )
                     
-                    if dataset == 'gsm8k' or dataset == 'numina':
+                    if dataset == 'gsm8k':
                         # Only move to CPU when needed for string processing
                         for j, output_ids in enumerate(batch_outputs):
                             forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
                             early_generated_answers.append(forced_text)
                             extracted = extract_numerical_answer(forced_text)
+                            early_extracted_answers.append(extracted)
+                            try:
+                                if float(extracted) == float(q_answer):
+                                    early_correct_flags.append(1)
+                                else:
+                                    early_correct_flags.append(0)
+                            except Exception:
+                                early_correct_flags.append(0)
+                    elif dataset == 'numina':
+                        # Only move to CPU when needed for string processing
+                        for j, output_ids in enumerate(batch_outputs):
+                            forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
+                            early_generated_answers.append(forced_text)
+                            extracted = extract_numerical_answer(forced_text)
+                            # remove any non-numeric characters from the extracted string
+                            extracted = ''.join(c for c in extracted if c.isdigit() or c == '.')
                             early_extracted_answers.append(extracted)
                             print(f"Extracted: {extracted}, Ground truth: {q_answer}")
                             try:
