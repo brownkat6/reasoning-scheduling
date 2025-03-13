@@ -148,13 +148,14 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     an excerpt of the response matches the given gold truth answer. The format or units of
     the response and gold truth answer might be different. However, you must evaluate if the
     answers are numerically equivalent/identical. Be extra careful when evaluating fractions,
-    they must simplify to the same value. Your response should be a single word followed by an
+    they must simplify to the same value. Your response should be a single word YES or NO followed by an
     explanation. 'Are these answers equivalent? YES' if the answers are equivalent and 'Are these answers equivalent? NO' if they are not.
-    Examples:
-    A) 7% and 7 are equivalent
-    B) 10/2 and 20/4 are equivalent
-    C) 3,5,7 and 3,8,9 are not equivalent.
-    Now compare the following ground truth answer and response for equivalence:
+    Ground Truth Answer: 10/2
+    Response: 20/4
+    Are these answers equivalent? YES
+    Ground Truth Answer: 10/2
+    Response: 20/5
+    Are these answers equivalent? NO
     Ground Truth Answer: {ground_truth}
     Response: {response}
     Are these answers equivalent? 
@@ -164,7 +165,7 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     device = next(model.parameters()).device  # Get the device the model is on
     #print(f"evaluate_answers_with_llm device: {device}")
     # print name of model
-    print(f"evaluate_answers_with_llm model: {model}")
+    #print(f"evaluate_answers_with_llm model: {model}")
     
     # Process outputs in batches
     for i in range(0, len(batch_outputs), batch_size):
