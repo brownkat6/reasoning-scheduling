@@ -189,9 +189,11 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
         # Process each evaluation output
         eval_texts = []
         for eval_output in eval_outputs:
-            eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
+            # only decode the text after the input prompt into eval_text
+            judgment_part = tokenizer.decode(eval_output[len(inputs["input_ids"][0]):], skip_special_tokens=True)
+            #eval_text = tokenizer.decode(eval_output, skip_special_tokens=True)
             # Extract the judgment part
-            judgment_part = eval_text.split("My judgement is: ")[-1].strip()
+            #judgment_part = eval_text.split("My judgement is: ")[-1].strip()
             eval_texts.append(judgment_part)
             results.append(1 if "YES" in judgment_part.upper() else 0)
         print(f"eval_texts: {eval_texts}")
