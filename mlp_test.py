@@ -66,6 +66,9 @@ def load_numina_dataset():
             ground_truth = ground_truth.split("}$")[0]
         elif ground_truth[-1] == "}":
             ground_truth = ground_truth[:-1]
+        if len(ground_truth) > 6:
+            # throw out answers with more than 6 characters for ease of matching
+            continue
         test_data.append({"id": f"test_{i}", "question": question, "answer": ground_truth})
     return test_data
 
