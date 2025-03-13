@@ -150,6 +150,8 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     answers are numerically equivalent/identical. Be extra careful when evaluating fractions,
     they must simplify to the same value. Your response should be a single word YES or NO followed by an
     explanation. 'Are these answers equivalent? YES' if the answers are equivalent and 'Are these answers equivalent? NO' if they are not.
+    Don't use the sympy library or some external tool to evaluate if the answers are equivalent, just give your judgement based on the definition of equivalent.
+    Examples:
     Ground Truth Answer: 10/2
     Response: 20/4
     Are these answers equivalent? YES, because 10/2 = 5 and 20/4 = 5
