@@ -64,10 +64,10 @@ def load_numina_dataset():
         ground_truth = answer_field.split("boxed{")[1].strip()
         if "}$" in ground_truth:
             ground_truth = ground_truth.split("}$")[0]
-        elif ground_truth.endswith("}]"):
-            ground_truth = ground_truth[:-2]
         elif ground_truth[-1] == "}":
             ground_truth = ground_truth[:-1]
+        if ground_truth.endswith("}]"):
+            ground_truth = ground_truth[:-2]
         if len(ground_truth) > 6:
             # throw out answers with more than 6 characters for ease of matching
             continue
