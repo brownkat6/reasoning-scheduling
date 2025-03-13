@@ -180,7 +180,7 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
             eval_outputs = model.generate(
                 inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],
-                max_new_tokens=10,
+                max_new_tokens=50,
                 pad_token_id=tokenizer.pad_token_id,
                 num_return_sequences=1,
                 temperature=0.1,
