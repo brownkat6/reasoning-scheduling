@@ -68,6 +68,9 @@ def load_numina_dataset():
             ground_truth = ground_truth[:-1]
         if ground_truth.endswith("}]"):
             ground_truth = ground_truth[:-2]
+        # if there are any non-numeric characters in the answer then continue
+        if not ground_truth.replace(".", "").replace("-", "").isdigit():
+            continue
         # if there are any alphabetical characters in the answer then continue
         if any(c.isalpha() for c in ground_truth):
             continue
@@ -411,7 +414,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             num_return_sequences=1
                         )
                     
-                    if dataset == 'gsm8k':
+                    if dataset == 'gsm8k' or dataset == 'numina':
                         # Only move to CPU when needed for string processing
                         for j, output_ids in enumerate(batch_outputs):
                             forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
