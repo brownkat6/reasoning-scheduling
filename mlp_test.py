@@ -81,6 +81,7 @@ def load_numina_dataset(split='test'):
             # throw out answers with more than 6 characters for ease of matching
             continue
         test_data.append({"id": f"test_{i}", "question": question, "answer": ground_truth})
+    print(f"Loaded {len(test_data)} questions from Numina dataset for split {split}")
     return test_data
 
 def load_gsm8k_dataset():
