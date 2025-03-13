@@ -440,7 +440,6 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             # remove any non-numeric characters from the extracted string
                             extracted = ''.join(c for c in extracted if c.isdigit() or c == '.')
                             early_extracted_answers.append(extracted)
-                            print(f"Extracted: {extracted}, Ground truth: {q_answer}")
                             try:
                                 if float(extracted) == float(q_answer):
                                     early_correct_flags.append(1)
