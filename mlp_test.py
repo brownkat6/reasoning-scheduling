@@ -48,13 +48,16 @@ def load_math500_dataset():
         test_data.append({"id": f"train_{i}", "question": question, "answer": ground_truth})
     return test_data
 
-def load_numina_dataset():
+def load_numina_dataset(split='test'):
     """
     AI-MO/NuminaMath-CoT dataset.
     
     NOTE: there is also a train set with like 800K samples but I'm not using it for now
     """
-    ds = load_dataset("AI-MO/NuminaMath-CoT", split="test")
+    ds = load_dataset("AI-MO/NuminaMath-CoT", split=split, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/datasets")
+    if split == 'train':
+        # truncate to first 2000 entries
+        ds = ds.select(range(2000))
     test_data = []
     for i, sample in enumerate(ds):
         question = sample["problem"]
@@ -259,15 +262,15 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
     if dataset == 'gsm8k':
         train_data, test_data = load_gsm8k_dataset()
+        # Select the appropriate split
+        questions = train_data if split == 'train' else test_data
     elif dataset == 'math500':
         if split == 'train':
             raise ValueError("Math500 does not have a train split")
         test_data = load_math500_dataset()
+        questions = test_data
     elif dataset == 'numina':
-        test_data = load_numina_dataset()
-    
-    # Select the appropriate split
-    questions = train_data if split == 'train' else test_data
+        questions = load_numina_dataset(split=split)
     
     # Calculate batch bounds
     start_idx = batch_idx * batch_size
