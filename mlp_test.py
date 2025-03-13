@@ -154,6 +154,7 @@ def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, bat
     A) 7% and 7 are equivalent
     B) 10/2 and 20/4 are equivalent
     C) 3,5,7 and 3,8,9 are not equivalent.
+    Now compare the following ground truth answer and response for equivalence:
     Ground Truth Answer: {ground_truth}
     Response: {response}
     My judgement is: 
