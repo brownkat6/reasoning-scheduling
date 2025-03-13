@@ -56,8 +56,8 @@ def load_numina_dataset(split='test'):
     """
     ds = load_dataset("AI-MO/NuminaMath-CoT", split=split)#, cache_dir="/n/netscratch/dwork_lab/Lab/katrina/datasets")
     if split == 'train':
-        # truncate to first 2000 entries
-        ds = ds.select(range(2000))
+        # truncate to first 4000 entries
+        ds = ds.select(range(4000))
     test_data = []
     for i, sample in enumerate(ds):
         question = sample["problem"]
