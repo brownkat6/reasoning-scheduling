@@ -421,6 +421,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             early_generated_answers.append(forced_text)
                             extracted = extract_numerical_answer(forced_text)
                             early_extracted_answers.append(extracted)
+                            print(f"Extracted: {extracted}, Ground truth: {q_answer}")
                             try:
                                 if float(extracted) == float(q_answer):
                                     early_correct_flags.append(1)
