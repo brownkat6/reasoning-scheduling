@@ -48,6 +48,25 @@ def load_math500_dataset():
         test_data.append({"id": f"train_{i}", "question": question, "answer": ground_truth})
     return test_data
 
+def load_numina_dataset():
+    """
+    AI-MO/NuminaMath-CoT dataset.
+    
+    NOTE: there is also a train set with like 800K samples but I'm not using it for now
+    """
+    ds = load_dataset("AI-MO/NuminaMath-CoT", split="test")
+    test_data = []
+    for i, sample in enumerate(ds):
+        question = sample["problem"]
+        answer_field = sample["solution"]
+        ground_truth = answer_field.split("boxed{")[1].strip()
+        if "}$" in ground_truth:
+            ground_truth = ground_truth.split("}$")[0]
+        elif ground_truth[-1] == "}":
+            ground_truth = ground_truth[:-1]
+        test_data.append({"id": f"test_{i}", "question": question, "answer": ground_truth})
+    return test_data
+
 def load_gsm8k_dataset():
     """
     Load the GSM8K dataset using Hugging Face datasets.
@@ -231,6 +250,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         if split == 'train':
             raise ValueError("Math500 does not have a train split")
         test_data = load_math500_dataset()
+    elif dataset == 'numina':
+        test_data = load_numina_dataset()
     
     # Select the appropriate split
     questions = train_data if split == 'train' else test_data
@@ -264,7 +285,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
 
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
-    if dataset == 'math500':
+    if dataset in ['math500', 'numina']:
         judge_model, judge_tokenizer = get_judge_model_and_tokenizer()
 
     # Move model to GPU once
@@ -841,7 +862,7 @@ def main():
     parser.add_argument("--batch_idx", type=int, help="Batch index for data generation (required with --generate)")
     parser.add_argument("--split", type=str, choices=['train', 'test'], help="Which split to process (required with --generate)")
     parser.add_argument("--csv_file", type=str, default="gsm8k_results.csv", help="CSV file to load/save generated data")
-    parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500'], help="Which dataset to use")
+    parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
     parser.add_argument("--data_dir", type=str, default="data/gsm8k_results", help="Directory containing the batched results")
     args = parser.parse_args()
