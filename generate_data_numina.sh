@@ -1,12 +1,15 @@
 #!/bin/bash
-#SBATCH -c 4                # Number of cores (-c)
-#SBATCH -t 0-12:00          # Runtime in D-HH:MM, minimum of 10 minutes
-#SBATCH -p seas_gpu         # Partition to submit to
-#SBATCH --gres=gpu:1
-#SBATCH --mem=32G           # Memory pool for all cores (see also --mem-per-cpu)
+#SBATCH --time=4:00:00             # Time limit
+#SBATCH -p gpu_requeue         # Partition to submit to
 #SBATCH --output=logs/numina_%A_%a.out   # Standard output and error log
 #SBATCH --error=logs/numina_%A_%a.err    # Standard error file
 #SBATCH --array=0-10        # Array jobs from 0 to 10 (11 total jobs)
+#SBATCH --nodes=1                   # Number of nodes
+#SBATCH --ntasks=1                 # Number of tasks
+#SBATCH --gres=gpu:2               # Request 1 GPUs
+#SBATCH --constraint='h100'        # Request H100 GPUs
+#SBATCH --mem=128G                 # Memory per node
+#SBATCH --cpus-per-task=4          # Number of CPU cores per task
 
 mkdir -p logs
 mkdir -p data/numina_results
