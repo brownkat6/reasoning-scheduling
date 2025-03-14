@@ -630,6 +630,9 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     Y_train_tensor = torch.tensor(Y_train, dtype=torch.float32).to('cuda')
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to('cuda')
     Y_test_tensor = torch.tensor(Y_test, dtype=torch.float32).to('cuda')
+    
+    print(f"Training data shape: {X_train_tensor.shape}, {Y_train_tensor.shape}")
+    print(f"Testing data shape: {X_test_tensor.shape}, {Y_test_tensor.shape}")
 
     train_dataset = torch.utils.data.TensorDataset(X_train_tensor, Y_train_tensor)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
