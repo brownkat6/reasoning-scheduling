@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --time=4:00:00             # Time limit
-#SBATCH -p gpu_requeue         # Partition to submit to
+#SBATCH --partition=gpu_requeue
 #SBATCH --output=logs/numina_%A_%a.out   # Standard output and error log
 #SBATCH --error=logs/numina_%A_%a.err    # Standard error file
 #SBATCH --array=0-10        # Array jobs from 0 to 10 (11 total jobs)
