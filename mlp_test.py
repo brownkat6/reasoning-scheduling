@@ -917,8 +917,7 @@ def main():
     args = parser.parse_args()
     
     csv_file = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.csv_file
-    train_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.train_data_dir
-    test_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.test_data_dir
+    
 
     if args.generate:
         if args.batch_idx is None:
@@ -929,6 +928,8 @@ def main():
     elif args.train:
         if args.train_data_dir is None or args.test_data_dir is None:
             parser.error("--train_data_dir and --test_data_dir are required when using --train")
+        train_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.train_data_dir
+        test_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.test_data_dir
         train_mlp(
             train_data_dir=train_data_dir,
             train_split=args.train_split,
