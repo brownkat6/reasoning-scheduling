@@ -805,10 +805,11 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     plt.ylim(-0.1, 1.1)
     
     plt.tight_layout()
-    plt.savefig('figures/prediction_correlation_plots.png', dpi=300, bbox_inches='tight')
+    figure_name = f'prediction_correlation_plots_{train_dataset}_{train_split}_to_{test_dataset}_{test_split}.png'
+    plt.savefig(os.path.join('figures', figure_name), dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"\nVisualization saved to figures/prediction_correlation_plots.png")
+    print(f"\nVisualization saved to figures/{figure_name}")
 
     # Create a new figure for residuals normality plots
     plt.figure(figsize=(15, 5*n_rows))
@@ -875,10 +876,11 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     plt.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('figures/residuals_normality_plots.png', dpi=300, bbox_inches='tight')
+    residuals_figure_name = f'residuals_normality_plots_{train_dataset}_{train_split}_to_{test_dataset}_{test_split}.png'
+    plt.savefig(os.path.join('figures', residuals_figure_name), dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"\nVisualization saved to figures/residuals_normality_plots.png")
+    print(f"\nVisualization saved to figures/{residuals_figure_name}")
 
 
 def main():
@@ -915,10 +917,10 @@ def main():
         if args.train_data_dir is None or args.test_data_dir is None:
             parser.error("--train_data_dir and --test_data_dir are required when using --train")
         train_mlp(
-            train_data_dir=args.train_data_dir,
+            train_data_dir=train_data_dir,
             train_split=args.train_split,
             train_dataset=args.train_dataset,
-            test_data_dir=args.test_data_dir,
+            test_data_dir=test_data_dir,
             test_split=args.test_split,
             test_dataset=args.test_dataset
         )
