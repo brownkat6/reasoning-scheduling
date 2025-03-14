@@ -637,10 +637,10 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     print(f"Training data shape: {X_train_tensor.shape}, {Y_train_tensor.shape}")
     print(f"Testing data shape: {X_test_tensor.shape}, {Y_test_tensor.shape}")
     
-    # if Y_train has shape (N, D) and Y_test has shape (N, F) where F>d, truncate Y_test to have shape (N,D)
-    if Y_train_tensor.shape[1] > Y_test_tensor.shape[1]:
+    # if Y_train has shape (N, D) and Y_test has shape (N, F) where F>D, truncate Y_test to have shape (N,D)
+    if Y_test_tensor.shape[1] > Y_train_tensor.shape[1]:
         Y_test_tensor = Y_test_tensor[:, :Y_train_tensor.shape[1]]
-    print(f"Truncated testing data shape: {Y_test_tensor.shape}")
+        print(f"Truncated testing data shape: {Y_test_tensor.shape}")
 
     train_dataset = torch.utils.data.TensorDataset(X_train_tensor, Y_train_tensor)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
