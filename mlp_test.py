@@ -157,12 +157,12 @@ def get_model_and_tokenizer():
 def extract_numerical_answer(forced_text):
     """
     Extracts the answer text from the last occurrence of \boxed{<answer>} in forced_text.
-    Returns the extracted answer text as a string, or None if no match is found.
+    Returns the extracted answer text as a string, or the string itself if no match is found.
     """
     matches = re.findall(r'\\boxed\{([^}]*)\}', forced_text)
     if matches:
         return matches[-1].strip()
-    return None
+    return forced_text
 
 
 def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, batch_size=16):
@@ -421,7 +421,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                     if dataset == 'gsm8k':
                         # Only move to CPU when needed for string processing
                         for j, output_ids in enumerate(batch_outputs):
-                            forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
+                            # decode only the text not included in the input prompt into forced_text
+                            forced_text = tokenizer.decode(output_ids.cpu()[len(inputs_trace['input_ids'][j]):], skip_special_tokens=True)
                             early_generated_answers.append(forced_text)
                             extracted = extract_numerical_answer(forced_text)
                             early_extracted_answers.append(extracted)
@@ -439,7 +440,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             early_generated_answers.append(forced_text)
                             extracted = extract_numerical_answer(forced_text)
                             # remove any non-numeric characters from the extracted string
-                            extracted = ''.join(c for c in extracted if c.isdigit() or c == '.')
+                            if extracted is not None:
+                                extracted = ''.join(c for c in extracted if c.isdigit() or c == '.')
                             early_extracted_answers.append(extracted)
                             try:
                                 if float(extracted) == float(q_answer):
