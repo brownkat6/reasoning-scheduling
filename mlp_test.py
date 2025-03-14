@@ -509,97 +509,83 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     print(f"Data saved to {output_csv}")
 
 
-def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, dataset='gsm8k'):
+def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
+              test_data_dir='', test_split='test', test_dataset='gsm8k',
+              num_epochs=20, batch_size=4, learning_rate=1e-3):
     """
     Train an MLP to predict the early stopping correctness proportions from the hidden state.
-    The input is a 1536-dim vector (hidden state) and the output is a vector of length (S/W).
-    Training is performed on one entry per question (grouping the num_traces rows for each question).
-    Reports overall MSE and per-position MSE and Pearson correlation on both train and test splits.
+    Allows training on one dataset/split and testing on another.
     
     Args:
-        csv_file: Directory containing the batched results (ignored if directory exists)
+        train_data_dir: Directory containing the training data files
+        train_split: Split to use for training ('train' or 'test')
+        train_dataset: Dataset name for training data
+        test_data_dir: Directory containing the test data files
+        test_split: Split to use for testing ('train' or 'test')
+        test_dataset: Dataset name for test data
         num_epochs: Number of training epochs
         batch_size: Batch size for training
         learning_rate: Learning rate for optimizer
     """
-    # Load all batched data files
-    #data_dir = "data/gsm8k_results"
-    if not os.path.exists(data_dir):
-        raise ValueError(f"Data directory {data_dir} not found. Please generate data first.")
+    # Validate input directories
+    if not os.path.exists(train_data_dir):
+        raise ValueError(f"Training data directory {train_data_dir} not found.")
+    if not os.path.exists(test_data_dir):
+        raise ValueError(f"Test data directory {test_data_dir} not found.")
     
-    train_grouped_file = os.path.join(data_dir, f"{dataset}_results_train_grouped.csv")
-    test_grouped_file = os.path.join(data_dir, f"{dataset}_results_test_grouped.csv")
+    # Define grouped file paths
+    train_grouped_file = os.path.join(train_data_dir, f"{train_dataset}_results_{train_split}_grouped.csv")
+    test_grouped_file = os.path.join(test_data_dir, f"{test_dataset}_results_{test_split}_grouped.csv")
     
-    if not os.path.exists(train_grouped_file) or not os.path.exists(test_grouped_file):
-        print("Loading and combining all batched data files...")
-        
-        # Use list comprehension and error handling in a single pass
-        train_files = [os.path.join(data_dir, f"{dataset}_results_train_{i}.csv") for i in range(75)]
-        test_files = [os.path.join(data_dir, f"{dataset}_results_test_{i}.csv") for i in range(14)]
-        
-        # Filter to only existing files
+    # Process training data if grouped file doesn't exist
+    if not os.path.exists(train_grouped_file):
+        print("Loading and combining training data files...")
+        train_files = [os.path.join(train_data_dir, f"{train_dataset}_results_{train_split}_{i}.csv") for i in range(100)]
         train_files = [f for f in train_files if os.path.exists(f)]
+        
+        if not train_files:
+            raise ValueError(f"No training data files found in {train_data_dir}")
+        
+        train_grouped_dfs = []
+        for f in train_files:
+            try:
+                df = pd.read_csv(f)
+                grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+                train_grouped_dfs.append(grouped)
+            except Exception as e:
+                print(f"Error loading {f}: {e}")
+        train_grouped = pd.concat(train_grouped_dfs, ignore_index=True)
+        train_grouped.to_csv(train_grouped_file, index=False)
+        print(f"Saved grouped training data with {len(train_grouped)} questions")
+    else:
+        print("Loading pre-grouped training data...")
+        train_grouped = pd.read_csv(train_grouped_file)
+    
+    # Process test data if grouped file doesn't exist
+    if not os.path.exists(test_grouped_file):
+        print("Loading and combining test data files...")
+        test_files = [os.path.join(test_data_dir, f"{test_dataset}_results_{test_split}_{i}.csv") for i in range(100)]
         test_files = [f for f in test_files if os.path.exists(f)]
         
-        if not train_files and not test_files:
-            raise ValueError(f"No data files found in {data_dir}. Please generate data first.")
+        if not test_files:
+            raise ValueError(f"No test data files found in {test_data_dir}")
         
-        # Read and concatenate train files in one operation
-        if train_files:
-            print(f"Loading {len(train_files)} train files...")
-            train_grouped_dfs = []
-            for f in train_files:
-                try:
-                    df = pd.read_csv(f)
-                    grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
-                    train_grouped_dfs.append(grouped)
-                except Exception as e:
-                    print(f"Error loading {f}: {e}")
-            train_grouped = pd.concat(train_grouped_dfs, ignore_index=True)
-            #train_grouped = pd.concat(
-            #    (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in train_files), 
-            #    ignore_index=True
-            #)
-            
-            #train_grouped = train_df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
-            train_grouped.to_csv(train_grouped_file, index=False)
-            print(f"Saved grouped train data with {len(train_grouped)} questions")
-        else:
-            train_grouped = pd.DataFrame()
-            
-        # Read and concatenate test files in one operation
-        if test_files:
-            print(f"Loading {len(test_files)} test files...")
-            test_grouped_dfs = []
-            for f in test_files:
-                try:
-                    df = pd.read_csv(f)
-                    grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
-                    test_grouped_dfs.append(grouped)
-                except Exception as e:
-                    print(f"Error loading {f}: {e}")
-            test_grouped = pd.concat(test_grouped_dfs, ignore_index=True)
-            #test_grouped = pd.concat(
-            #    (pd.read_csv(f).groupby(['question_id', 'split', 'question_text']).first().reset_index() for f in test_files), 
-            #    ignore_index=True
-            #)
-            #test_grouped = test_df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
-            test_grouped.to_csv(test_grouped_file, index=False)
-            print(f"Saved grouped test data with {len(test_grouped)} questions")
-        else:
-            test_grouped = pd.DataFrame()
+        test_grouped_dfs = []
+        for f in test_files:
+            try:
+                df = pd.read_csv(f)
+                grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
+                test_grouped_dfs.append(grouped)
+            except Exception as e:
+                print(f"Error loading {f}: {e}")
+        test_grouped = pd.concat(test_grouped_dfs, ignore_index=True)
+        test_grouped.to_csv(test_grouped_file, index=False)
+        print(f"Saved grouped test data with {len(test_grouped)} questions")
     else:
-        print("Loading pre-grouped data files...")
-        train_grouped = pd.read_csv(train_grouped_file)
+        print("Loading pre-grouped test data...")
         test_grouped = pd.read_csv(test_grouped_file)
-    
-    grouped = pd.concat([train_grouped, test_grouped], ignore_index=True)
-    print(f"Total rows: {len(grouped)}")
-    # print number of unique questions in train and number of unique questions in test
-    #print(f"Number of unique questions in train: {df[df['split'] == 'train']['question_id'].nunique()}")
-    #print(f"Number of unique questions in test: {df[df['split'] == 'test']['question_id'].nunique()}")
 
-    # Group by question_id, split, question_text and take the first occurrence
+    # Parse lists from string representation
     import ast
     def parse_list(x):
         try:
@@ -607,15 +593,18 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
         except Exception:
             return x
 
-    grouped['hidden_state'] = grouped['hidden_state'].apply(parse_list)
-    grouped['early_stop_correct_proportions'] = grouped['early_stop_correct_proportions'].apply(parse_list)
+    train_grouped['hidden_state'] = train_grouped['hidden_state'].apply(parse_list)
+    train_grouped['early_stop_correct_proportions'] = train_grouped['early_stop_correct_proportions'].apply(parse_list)
+    test_grouped['hidden_state'] = test_grouped['hidden_state'].apply(parse_list)
+    test_grouped['early_stop_correct_proportions'] = test_grouped['early_stop_correct_proportions'].apply(parse_list)
 
-    X = np.vstack(grouped['hidden_state'].values)  # shape (num_questions, 1536)
-    Y = np.vstack(grouped['early_stop_correct_proportions'].values)  # shape (num_questions, output_dim)
-
-    train_mask = grouped['split'] == 'train'
-    X_train, Y_train = X[train_mask], Y[train_mask]
-    X_test, Y_test = X[~train_mask], Y[~train_mask]
+    # Prepare training data
+    X_train = np.vstack(train_grouped['hidden_state'].values)
+    Y_train = np.vstack(train_grouped['early_stop_correct_proportions'].values)
+    
+    # Prepare test data
+    X_test = np.vstack(test_grouped['hidden_state'].values)
+    Y_test = np.vstack(test_grouped['early_stop_correct_proportions'].values)
 
     print(f"Training questions: {X_train.shape[0]}, Testing questions: {X_test.shape[0]}")
 
@@ -633,7 +622,7 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
             x = self.fc2(x)
             return x
 
-    model_mlp = MLP(input_dim=1536, hidden_dim=256, output_dim=Y.shape[1]).to('cuda')  # Move model to CUDA
+    model_mlp = MLP(input_dim=1536, hidden_dim=256, output_dim=Y_train.shape[1]).to('cuda')  # Move model to CUDA
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model_mlp.parameters(), lr=learning_rate)
 
@@ -893,7 +882,7 @@ def train_mlp(data_dir='', num_epochs=20, batch_size=4, learning_rate=1e-3, data
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MLP test experiment for GSM8K reasoning traces")
+    parser = argparse.ArgumentParser(description="MLP test experiment for reasoning traces")
     parser.add_argument("--generate", action="store_true", help="Run data generation experiment")
     parser.add_argument("--train", action="store_true", help="Train the MLP on generated data")
     parser.add_argument("--batch_idx", type=int, help="Batch index for data generation (required with --generate)")
@@ -901,11 +890,20 @@ def main():
     parser.add_argument("--csv_file", type=str, default="gsm8k_results.csv", help="CSV file to load/save generated data")
     parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
-    parser.add_argument("--data_dir", type=str, default="data/gsm8k_results", help="Directory containing the batched results")
+    
+    # New arguments for refactored train_mlp
+    parser.add_argument("--train_data_dir", type=str, help="Directory containing training data files")
+    parser.add_argument("--train_split", type=str, default='train', choices=['train', 'test'], help="Split to use for training")
+    parser.add_argument("--train_dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Dataset for training")
+    parser.add_argument("--test_data_dir", type=str, help="Directory containing test data files")
+    parser.add_argument("--test_split", type=str, default='test', choices=['train', 'test'], help="Split to use for testing")
+    parser.add_argument("--test_dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Dataset for testing")
+    
     args = parser.parse_args()
     
     csv_file = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.csv_file
-    data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.data_dir
+    train_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.train_data_dir
+    test_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.test_data_dir
 
     if args.generate:
         if args.batch_idx is None:
@@ -914,8 +912,16 @@ def main():
             parser.error("--split is required when using --generate")
         generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file, dataset=args.dataset, S=args.S)
     elif args.train:
-        print(f"Training MLP on data in {data_dir}")
-        train_mlp(data_dir=data_dir)
+        if args.train_data_dir is None or args.test_data_dir is None:
+            parser.error("--train_data_dir and --test_data_dir are required when using --train")
+        train_mlp(
+            train_data_dir=args.train_data_dir,
+            train_split=args.train_split,
+            train_dataset=args.train_dataset,
+            test_data_dir=args.test_data_dir,
+            test_split=args.test_split,
+            test_dataset=args.test_dataset
+        )
     else:
         print("Please specify --generate or --train.")
 
