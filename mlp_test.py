@@ -533,6 +533,9 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     if not os.path.exists(test_data_dir):
         raise ValueError(f"Test data directory {test_data_dir} not found.")
     
+    train_dataset_name=train_dataset
+    test_dataset_name=test_dataset
+    
     # Define grouped file paths
     train_grouped_file = os.path.join(train_data_dir, f"{train_dataset}_results_{train_split}_grouped.csv")
     test_grouped_file = os.path.join(test_data_dir, f"{test_dataset}_results_{test_split}_grouped.csv")
@@ -808,7 +811,7 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     plt.ylim(-0.1, 1.1)
     
     plt.tight_layout()
-    figure_name = f'prediction_correlation_plots_{train_dataset}_{train_split}_to_{test_dataset}_{test_split}.png'
+    figure_name = f'prediction_correlation_plots_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
     plt.savefig(os.path.join('figures', figure_name), dpi=300, bbox_inches='tight')
     plt.close()
     
@@ -879,7 +882,7 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     plt.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    residuals_figure_name = f'residuals_normality_plots_{train_dataset}_{train_split}_to_{test_dataset}_{test_split}.png'
+    residuals_figure_name = f'residuals_normality_plots_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
     plt.savefig(os.path.join('figures', residuals_figure_name), dpi=300, bbox_inches='tight')
     plt.close()
     
