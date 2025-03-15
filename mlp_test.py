@@ -45,7 +45,7 @@ def load_math500_dataset():
         question = sample["problem"]
         answer_field = sample["answer"]
         ground_truth = answer_field.strip()
-        test_data.append({"id": f"train_{i}", "question": question, "answer": ground_truth})
+        test_data.append({"id": f"train_{i}", "problem": question, "answer": ground_truth})
     return test_data
 
 def load_numina_dataset(split='test'):
@@ -80,7 +80,7 @@ def load_numina_dataset(split='test'):
         if len(ground_truth) > 6:
             # throw out answers with more than 6 characters for ease of matching
             continue
-        test_data.append({"id": f"test_{i}", "question": question, "answer": ground_truth})
+        test_data.append({"id": f"test_{i}", "problem": question, "answer": ground_truth})
     print(f"Loaded {len(test_data)} questions from Numina dataset for split {split}")
     return test_data
 
@@ -99,22 +99,22 @@ def load_gsm8k_dataset():
     test_data = []
     
     for i, sample in enumerate(ds_train):
-        question = sample["question"]
+        question = sample["problem"]
         answer_field = sample["answer"]
         if "#### " in answer_field:
             ground_truth = answer_field.split("#### ")[-1].strip() if "#### " in answer_field else answer_field.strip()
         else:
             ground_truth = answer_field.strip()
-        train_data.append({"id": f"train_{i}", "question": question, "answer": ground_truth})
+        train_data.append({"id": f"train_{i}", "problem": question, "answer": ground_truth})
     
     for i, sample in enumerate(ds_test):
-        question = sample["question"]
+        question = sample["problem"]
         answer_field = sample["answer"]
         if "#### " in answer_field:
             ground_truth = answer_field.split("#### ")[-1].strip()
         else:
             ground_truth = answer_field.strip()
-        test_data.append({"id": f"test_{i}", "question": question, "answer": ground_truth})
+        test_data.append({"id": f"test_{i}", "problem": question, "answer": ground_truth})
     
     return train_data, test_data
 
@@ -164,6 +164,15 @@ def extract_numerical_answer(forced_text):
         return matches[-1].strip()
     return forced_text
 
+from Dynasor.dynasor.core.evaluator import math_equal
+def evaluate_answers_with_math_equal(model, tokenizer, batch_outputs, ground_truth, batch_size=16):
+    """
+    Evaluate a batch of model outputs against a ground truth answer using the math_equal function.
+    """
+    results = []
+    for output in batch_outputs:
+        results.append(1 if math_equal(output, ground_truth) else 0)
+    return results
 
 def evaluate_answers_with_llm(model, tokenizer, batch_outputs, ground_truth, batch_size=16):
     """
@@ -439,6 +448,10 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                             except Exception:
                                 early_correct_flags.append(0)
                     elif dataset == 'numina':
+                        forced_text = [tokenizer.decode(output_ids.cpu()[len(inputs_trace['input_ids'][j]):], skip_special_tokens=True) for output_ids in batch_outputs]
+                        forced_texts = [t.split("boxed{")[-1] if "boxed{" in t else t for t in forced_texts]
+                        early_correct_flags = evaluate_answers_with_math_equal(model, tokenizer, batch_outputs, q_answer)
+                        '''
                         # Only move to CPU when needed for string processing
                         for j, output_ids in enumerate(batch_outputs):
                             forced_text = tokenizer.decode(output_ids.cpu(), skip_special_tokens=True)
@@ -455,6 +468,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                                     early_correct_flags.append(0)
                             except Exception:
                                 early_correct_flags.append(0)
+                        '''
                     else:
                         # Use LLM evaluation for Math500
                         forced_texts = [tokenizer.decode(output_ids.cpu(), skip_special_tokens=True) for output_ids in batch_outputs]
@@ -727,6 +741,27 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     print("\nRelative Improvement Over Test Means Baseline:")
     print(f"Train improvement: {train_improvement_test_means:.1f}%")
     print(f"Test improvement: {test_improvement_test_means:.1f}%")
+
+    # Create models directory if it doesn't exist
+    os.makedirs('models', exist_ok=True)
+    
+    # Save the model
+    model_filename = f'models/mlp_{train_dataset}_{train_split}.pt'
+    torch.save({
+        'model_state_dict': model_mlp.state_dict(),
+        'train_means': train_means,  # Save training means for future reference
+        'config': {
+            'input_dim': 1536,
+            'hidden_dim': 128,
+            'output_dim': Y_train.shape[1],
+            'train_dataset': train_dataset,
+            'train_split': train_split,
+            'num_epochs': num_epochs,
+            'batch_size': batch_size,
+            'learning_rate': learning_rate
+        }
+    }, model_filename)
+    print(f"\nModel saved to {model_filename}")
 
     # Also print out the means themselves for comparison
     print("\nMean Values:")
