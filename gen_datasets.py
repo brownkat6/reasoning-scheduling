@@ -59,8 +59,8 @@ def load_numina_data(split):
     for i, sample in enumerate(ds):
         question = sample["problem"]
         answer_field = sample["solution"]
-        #if "boxed{" not in answer_field:
-        #    continue
+        if "boxed{" not in answer_field:
+            continue
         ground_truth = answer_field.split("boxed{")[1].strip()
         if "}$" in ground_truth:
             ground_truth = ground_truth.split("}$")[0]
