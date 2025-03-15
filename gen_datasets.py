@@ -79,6 +79,7 @@ def load_numina_data(split):
         #    continue
         test_data.append({"id": f"test_{i}", "problem": question, "answer": ground_truth})
     print(f"Loaded {len(test_data)} questions from Numina dataset for split {split}")
+    return test_data
 
 def save_jsonl(data, output_file):
     """Save data in JSONL format"""
