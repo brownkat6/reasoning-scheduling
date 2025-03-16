@@ -87,20 +87,14 @@ def load_model_and_tokenizer(model_name, url=None, api_key=None, cache_dir=None)
         model.eval()
         return model, tokenizer
 
-def get_hidden_states(model, tokenizer, prompts, is_vllm=False):
-    """Get hidden states for a batch of prompts"""
-    if is_vllm:
-        # Use vllm client's forward pass functionality
-        return model.get_hidden_states(prompts)
-    else:
-        # Local model forward pass
-        device = next(model.parameters()).device
-        inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
-        print(f"get_hidden_states: {inputs.input_ids.shape}")
-        with torch.inference_mode():
-            outputs = model(**inputs, output_hidden_states=True)
-            hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
-        return hidden_states
+def get_hidden_states(model, tokenizer, prompts):
+    """Get hidden states using local model"""
+    device = next(model.parameters()).device
+    inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
+    with torch.inference_mode():
+        outputs = model(**inputs, output_hidden_states=True)
+        hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
+    return hidden_states  # This will be on the same device as the model
 
 def optimize_token_allocation(predictions, token_budget, W=16):
     """
@@ -205,10 +199,12 @@ def main():
     print(f"{len(prompts)} prompts")
 
     # Get hidden states for all questions
-    hidden_states = get_hidden_states(model, tokenizer, prompts, is_vllm)
+    hidden_states = get_hidden_states(model, tokenizer, prompts)
     
     # Get MLP predictions for all questions
     with torch.inference_mode():
+        # Move hidden states to same device as MLP model
+        hidden_states = hidden_states.to(mlp_model.device)
         predictions = mlp_model(hidden_states).cpu().numpy()
 
     # Process each token budget
