@@ -18,16 +18,13 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         print(f"Input dim: {input_dim}, Hidden dim: {hidden_dim}, Output dim: {output_dim}")
         self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)  # Second hidden layer
-        self.fc3 = nn.Linear(hidden_dim, output_dim)  # Output layer
+        self.fc2 = nn.Linear(hidden_dim, output_dim)  # Output layer
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
         x = self.fc2(x)
-        x = self.relu(x)
-        x = self.fc3(x)
         return x
 
 def parse_args():
