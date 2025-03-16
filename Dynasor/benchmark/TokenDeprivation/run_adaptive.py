@@ -154,22 +154,25 @@ def main():
     # Load MLP model
     print(f"Loading MLP")
     mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
-    checkpoint = torch.load(mlp_path)
+    checkpoint = torch.load(mlp_path, map_location='cuda')  # Load directly to CUDA
     if 'model' in checkpoint:
-        print(f"Loading MLP from checkpoint")
-        mlp_model = checkpoint['model']
+        mlp_model = checkpoint['model'].cuda()  # Ensure model is on CUDA
     else:
         # Fall back to loading from state dict if necessary
-        print(f"Loading MLP from state dict")
         config = checkpoint['config']
-        config['hidden_dim']=256
         mlp_model = MLP(
             input_dim=config['input_dim'],
             hidden_dim=config['hidden_dim'],
             output_dim=config['output_dim']
-        )
-        mlp_model.load_state_dict(checkpoint['model_state_dict'])
+        ).cuda()  # Create model on CUDA
+        mlp_model.load_state_dict({k: v.cuda() for k, v in checkpoint['model_state_dict'].items()})  # Move state dict to CUDA
+
     mlp_model.eval()
+
+    # Double check all parameters are on CUDA
+    for param in mlp_model.parameters():
+        if not param.is_cuda:
+            param.data = param.data.cuda()
 
     # Setup output directory
     import os
@@ -203,9 +206,7 @@ def main():
     
     # Get MLP predictions for all questions
     with torch.inference_mode():
-        # Move hidden states to same device as MLP model
-        hidden_states = hidden_states.to("cuda")
-        print("device",hidden_states.device)
+        hidden_states = hidden_states.cuda()  # Ensure input is on CUDA
         predictions = mlp_model(hidden_states).cpu().numpy()
 
     # Process each token budget
