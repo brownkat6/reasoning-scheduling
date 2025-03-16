@@ -10,6 +10,8 @@
 #SBATCH --mem=128G                 # Memory per node
 #SBATCH --cpus-per-task=4          # Number of CPU cores per task
 
+# TODO: 3/14 - get vis_adative to work with gsm8k standardized SAME FORMAT EVERYWHERE ground truth data. 
+
 # Get the directory containing this script
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
@@ -21,8 +23,8 @@ mkdir -p "${OUTPUT_DIR}"
 set -x
 
 # Run the adaptive token deprivation experiment
-python run_adaptive.py \
-    --dataset math500 \
+python -u run_adaptive.py \
+    --dataset gsm8k \
     --mlp_train_dataset gsm8k \
     --mlp_train_split train \
     --model deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B \

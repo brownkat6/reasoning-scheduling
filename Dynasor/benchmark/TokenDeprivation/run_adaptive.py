@@ -143,6 +143,7 @@ def main():
     cache_dir = "/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers"
 
     # Load MLP model
+    print(f"Loading MLP")
     mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
     checkpoint = torch.load(mlp_path)
     mlp_model = MLP(
@@ -165,6 +166,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Load base model
+    print(f"Loading base model")
     model, tokenizer = load_model_and_tokenizer(
         args.model,
         args.url if not cache_dir else None,

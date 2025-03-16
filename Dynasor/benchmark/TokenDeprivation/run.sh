@@ -1,4 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#SBATCH --time=1:00:00             # Time limit
+#SBATCH --partition=gpu_requeue
+#SBATCH --output=logs/run_%A_%a.out   # Standard output and error log
+#SBATCH --error=logs/run_%A_%a.err    # Standard error file
+#SBATCH --nodes=1                   # Number of nodes
+#SBATCH --ntasks=1                 # Number of tasks
+#SBATCH --gres=gpu:2               # Request 1 GPUs
+#SBATCH --constraint='h100'        # Request H100 GPUs
+#SBATCH --mem=128G                 # Memory per node
+#SBATCH --cpus-per-task=4          # Number of CPU cores per task
 
 # Get the directory containing this script
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
@@ -9,14 +19,14 @@ mkdir -p "${OUTPUT_DIR}"
 
 # Run the token deprivation experiment
 set -x
-python "${SCRIPT_DIR}/run.py" \
+python -u "${SCRIPT_DIR}/run.py" \
     --model "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" \
-    --dataset "math500" \
+    --dataset "gsm8k" \
     --step 32 \
     --max-tokens 2048 \
     --start 0 \
     --end 10 \
-    --output "${OUTPUT_DIR}/math500_step32_max16384_trials10" \
+    --output "${OUTPUT_DIR}/gsm8k_step32_max16384_trials10" \
     --probe-tokens 32 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"
