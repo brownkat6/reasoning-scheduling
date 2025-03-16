@@ -746,7 +746,7 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     os.makedirs('models', exist_ok=True)
     
     # Save the model
-    model_filename = f'models/mlp_{train_dataset}_{train_split}.pt'
+    model_filename = f'models/mlp_{train_dataset_name}_{train_split}.pt'
     torch.save({
         'model_state_dict': model_mlp.state_dict(),
         'train_means': train_means,  # Save training means for future reference

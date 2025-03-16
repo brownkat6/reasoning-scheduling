@@ -8,6 +8,7 @@ from clients import vllmClientModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 # add the directory containing mlp_test to the path
 import sys
+import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mlp_test import MLP
 from run import execute_question_reuse
