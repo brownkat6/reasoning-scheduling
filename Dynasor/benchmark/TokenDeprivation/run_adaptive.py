@@ -16,6 +16,7 @@ import torch.nn as nn
 class MLP(nn.Module):
     def __init__(self, input_dim=1536, hidden_dim=256, output_dim=256):
         super(MLP, self).__init__()
+        print(f"Input dim: {input_dim}, Hidden dim: {hidden_dim}, Output dim: {output_dim}")
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)  # Second hidden layer
         self.fc3 = nn.Linear(hidden_dim, output_dim)  # Output layer
