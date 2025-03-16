@@ -35,7 +35,7 @@ def parse_args():
         "--dataset",
         type=str,
         required=True,
-        choices=["amc23", "aime24", "GPQADiamond", "math500"],
+        choices=["amc23", "aime24", "GPQADiamond", "math500", "gsm8k"],
         help="Dataset to use"
     )
     # Add arguments for MLP loading

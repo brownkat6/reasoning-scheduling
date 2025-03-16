@@ -16,8 +16,8 @@ def parse_args():
         "--dataset",
         type=str,
         required=True,
-        choices=["amc23", "aime24", "GPQADiamond", "math500"],
-        help="Dataset to use (amc23 or aime24 or math500)",
+        choices=["amc23", "aime24", "GPQADiamond", "math500", "gsm8k"],
+        help="Dataset to use (amc23 or aime24 or math500 or gsm8k)",
     )
     parser.add_argument(
         "--output", type=str, default="", help="Path to output results file"
@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=str,
-        default="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
         help="Name or path of the model to use",
     )
     parser.add_argument(
