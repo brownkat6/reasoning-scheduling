@@ -96,6 +96,7 @@ def get_hidden_states(model, tokenizer, prompts, is_vllm=False):
         # Local model forward pass
         device = next(model.parameters()).device
         inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
+        print(f"get_hidden_states: {inputs.input_ids.shape}")
         with torch.inference_mode():
             outputs = model(**inputs, output_hidden_states=True)
             hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
@@ -201,6 +202,7 @@ def main():
     questions = data[args.start:args.end]
     prompts = [item["problem"].strip() for item in questions]
     targets = [strip_string(item["answer"]) for item in questions]
+    print(f"{len(prompts)} prompts")
 
     # Get hidden states for all questions
     hidden_states = get_hidden_states(model, tokenizer, prompts, is_vllm)
