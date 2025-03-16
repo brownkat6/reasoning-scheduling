@@ -93,6 +93,7 @@ def load_dataset(dataset_name):
         "amc23": lambda: _load_jsonl_dataset("amc23"),
         "aime24": lambda: _load_jsonl_dataset("aime24"),
         "math500": lambda: _load_jsonl_dataset("math500"),
+        "gsm8k": lambda: _load_jsonl_dataset("gsm8k"),
     }
 
     if dataset_name not in dataset_loaders:
