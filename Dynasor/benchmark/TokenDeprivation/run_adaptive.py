@@ -6,6 +6,9 @@ from utils import save_json, load_dataset, set_seed
 from dynasor.core.evaluator import extract_answer, strip_string, math_equal, extract_first_boxed_answer
 from clients import vllmClientModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
+# add the directory containing mlp_test to the path
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mlp_test import MLP
 from run import execute_question_reuse
 import os
