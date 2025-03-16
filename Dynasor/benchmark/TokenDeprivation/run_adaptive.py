@@ -9,14 +9,25 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 # add the directory containing mlp_test to the path
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-print(f"Adding {os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))} to path")
-from mlp_test import MLP
-from run import execute_question_reuse
-import os
-import json
-import matplotlib.pyplot as plt
-from glob import glob
+#sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+#print(f"Adding {os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))} to path")
+import torch.nn as nn
+
+class MLP(nn.Module):
+    def __init__(self, input_dim=1536, hidden_dim=128, output_dim=256):
+        super(MLP, self).__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)  # Second hidden layer
+        self.fc3 = nn.Linear(hidden_dim, output_dim)  # Output layer
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.fc3(x)
+        return x
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Adaptive Token Deprivation Experiment")
