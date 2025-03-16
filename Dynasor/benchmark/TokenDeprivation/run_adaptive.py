@@ -14,7 +14,7 @@ import os
 import torch.nn as nn
 
 class MLP(nn.Module):
-    def __init__(self, input_dim=1536, hidden_dim=128, output_dim=256):
+    def __init__(self, input_dim=1536, hidden_dim=256, output_dim=256):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)  # Second hidden layer
@@ -66,7 +66,7 @@ def parse_args():
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=10000)
     parser.add_argument("--max-tokens", type=int, default=8192)
-    parser.add_argument("--step", type=int, default=128)
+    parser.add_argument("--step", type=int, default=256)
     parser.add_argument("--num-trials", type=int, default=10)
     parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument("--top-p", type=float, default=0.95)
