@@ -204,7 +204,7 @@ def main():
     # Get MLP predictions for all questions
     with torch.inference_mode():
         # Move hidden states to same device as MLP model
-        hidden_states = hidden_states.to(mlp_model.device)
+        hidden_states = hidden_states.to("cuda")
         predictions = mlp_model(hidden_states).cpu().numpy()
 
     # Process each token budget
