@@ -161,9 +161,11 @@ def main():
     mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
     checkpoint = torch.load(mlp_path)
     if 'model' in checkpoint:
+        print(f"Loading MLP from checkpoint")
         mlp_model = checkpoint['model']
     else:
         # Fall back to loading from state dict if necessary
+        print(f"Loading MLP from state dict")
         config = checkpoint['config']
         mlp_model = MLP(
             input_dim=config['input_dim'],
