@@ -14,11 +14,11 @@ import os
 import torch.nn as nn
 
 class MLP(nn.Module):
-    def __init__(self, input_dim=1536, hidden_dim=256, output_dim=256):
+    def __init__(self, input_dim=1536, hidden_dim=256, output_dim=16):
         super(MLP, self).__init__()
         print(f"Input dim: {input_dim}, Hidden dim: {hidden_dim}, Output dim: {output_dim}")
         self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)  # Output layer
+        self.fc2 = nn.Linear(hidden_dim, output_dim)  # Removed second hidden layer, direct connection to output
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -160,12 +160,17 @@ def main():
     print(f"Loading MLP")
     mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
     checkpoint = torch.load(mlp_path)
-    mlp_model = MLP(
-        input_dim=checkpoint['config']['input_dim'],
-        hidden_dim=checkpoint['config']['hidden_dim'],
-        output_dim=checkpoint['config']['output_dim']
-    ).to('cuda')
-    mlp_model.load_state_dict(checkpoint['model_state_dict'])
+    if 'model' in checkpoint:
+        mlp_model = checkpoint['model']
+    else:
+        # Fall back to loading from state dict if necessary
+        config = checkpoint['config']
+        mlp_model = MLP(
+            input_dim=config['input_dim'],
+            hidden_dim=config['hidden_dim'],
+            output_dim=config['output_dim']
+        )
+        mlp_model.load_state_dict(checkpoint['model_state_dict'])
     mlp_model.eval()
 
     # Setup output directory
