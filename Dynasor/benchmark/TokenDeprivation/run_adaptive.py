@@ -263,6 +263,7 @@ def main():
                 output_dir=output_dir,
                 top_p=args.top_p,
                 temperature=args.temperature,
+                tokenizer=tokenizer,
             )
 
     print(f"Saved results to {output_dir}")

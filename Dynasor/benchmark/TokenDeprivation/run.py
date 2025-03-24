@@ -96,6 +96,7 @@ def execute_question_reuse(
     output_dir=None,
     top_p=0.95,
     temperature=0.6,
+    tokenizer=None,
 ):
     results = []
     current_prompts = [apply_chat_template(prompt, model.config._name_or_path) for _ in range(num_trials)]
@@ -103,7 +104,8 @@ def execute_question_reuse(
     
     if not is_vllm:
         device = next(model.parameters()).device
-        tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
+        if tokenizer is None:
+            tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
 
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         # print(f"Executing question {i} with max tokens {max_tokens[i]}")
