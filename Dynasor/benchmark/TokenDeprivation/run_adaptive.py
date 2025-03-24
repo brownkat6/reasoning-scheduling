@@ -80,7 +80,8 @@ def parse_args():
 
 def load_model_and_tokenizer(model_name, url=None, api_key=None, cache_dir=None):
     """Load either local model or vllm endpoint"""
-    if url:
+    # if url:
+    if False:
         return vllmClientModel(model_name, url, api_key), None
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir=cache_dir)
