@@ -70,7 +70,11 @@ def parse_args():
     parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument("--top-p", type=float, default=0.95)
     parser.add_argument("--seed", type=int, default=42)
-    
+    parser.add_argument(
+        "--use-oracle",
+        action="store_true",
+        help="Use ground truth early stopping proportions instead of MLP predictions"
+    )
     return parser.parse_args()
 
 def load_model_and_tokenizer(model_name, url=None, api_key=None, cache_dir=None):
@@ -152,64 +156,58 @@ def main():
     data = load_dataset(args.dataset)
     cache_dir = "/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers"
 
-    # Load MLP model
-    print(f"Loading MLP")
-    mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
-    checkpoint = torch.load(mlp_path, map_location='cuda')  # Load directly to CUDA
-    if 'model' in checkpoint:
-        mlp_model = checkpoint['model'].cuda()  # Ensure model is on CUDA
-    else:
-        # Fall back to loading from state dict if necessary
-        config = checkpoint['config']
-        config['hidden_dim']=256
-        mlp_model = MLP(
-            input_dim=config['input_dim'],
-            hidden_dim=config['hidden_dim'],
-            output_dim=config['output_dim']
-        ).cuda()  # Create model on CUDA
-        mlp_model.load_state_dict({k: v.cuda() for k, v in checkpoint['model_state_dict'].items()})  # Move state dict to CUDA
-
-    mlp_model.eval()
-
-    # Double check all parameters are on CUDA
-    for param in mlp_model.parameters():
-        if not param.is_cuda:
-            param.data = param.data.cuda()
-
     # Setup output directory
-    import os
-    from datetime import datetime
     if args.output:
         output_dir = args.output
     else:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         model_name = args.model.replace("/", "-")
-        output_dir = f"results/adaptive_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}_{timestamp}"
+        prefix = "oracle" if args.use_oracle else "adaptive"
+        output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}_{timestamp}"
     os.makedirs(output_dir, exist_ok=True)
-
-    # Load base model
-    print(f"Loading base model")
-    model, tokenizer = load_model_and_tokenizer(
-        args.model,
-        args.url if not cache_dir else None,
-        args.api_key,
-        cache_dir
-    )
-    is_vllm = tokenizer is None
 
     # Process questions in range
     questions = data[args.start:args.end]
     prompts = [item["problem"].strip() for item in questions]
     targets = [strip_string(item["answer"]) for item in questions]
-    print(f"{len(prompts)} prompts")
 
-    # Get hidden states for all questions
-    hidden_states = get_hidden_states(model, tokenizer, prompts)
-    
-    # Get MLP predictions for all questions
-    with torch.inference_mode():
-        hidden_states = hidden_states.cuda()  # Ensure input is on CUDA
-        predictions = mlp_model(hidden_states).cpu().numpy()
+    if args.use_oracle:
+        # Load oracle data from grouped CSV
+        oracle_file = f"data/{args.dataset}_results/{args.dataset}_results_{args.split}_grouped.csv"
+        if not os.path.exists(oracle_file):
+            raise ValueError(f"Oracle data not found at {oracle_file}")
+        
+        import pandas as pd
+        import ast
+        oracle_data = pd.read_csv(oracle_file)
+        # Convert string representation of lists to actual lists
+        oracle_data['early_stop_correct_proportions'] = oracle_data['early_stop_correct_proportions'].apply(ast.literal_eval)
+        predictions = np.array(oracle_data['early_stop_correct_proportions'].tolist())
+        
+        print(f"Loaded oracle data from {oracle_file}")
+    else:
+        # Load and use MLP for predictions
+        mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
+        checkpoint = torch.load(mlp_path, map_location='cuda')
+        if 'model' in checkpoint:
+            mlp_model = checkpoint['model'].cuda()
+        else:
+            config = checkpoint['config']
+            mlp_model = MLP(
+                input_dim=config['input_dim'],
+                hidden_dim=config['hidden_dim'],
+                output_dim=config['output_dim']
+            ).cuda()
+            mlp_model.load_state_dict({k: v.cuda() for k, v in checkpoint['model_state_dict'].items()})
+        mlp_model.eval()
+
+        # Get model and tokenizer for hidden states
+        model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
+        
+        # Get hidden states and predictions
+        hidden_states = get_hidden_states(model, tokenizer, prompts)
+        with torch.inference_mode():
+            predictions = mlp_model(hidden_states.cuda()).cpu().numpy()
 
     # Process each token budget
     token_budgets = list(range(args.step, args.max_tokens + args.step, args.step))
@@ -217,17 +215,28 @@ def main():
     for token_budget in token_budgets:
         print(f"\nProcessing token budget: {token_budget}")
         
+        # Calculate expected reward under uniform allocation
+        uniform_reward = np.mean([predictions[i][token_budget//16 - 1] for i in range(len(predictions))])
+        print(f"Expected reward under uniform allocation: {uniform_reward}")
+        
         # Optimize token allocation for this budget
         max_tokens = optimize_token_allocation(predictions, token_budget)
         
+        # Calculate expected reward under optimized allocation
+        optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
+        print(f"Expected reward under allocation: {optimized_reward}")
+        print(f"Allocation: {max_tokens}")
+        
         # Execute questions with optimized token allocations
+        model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
             execute_question_reuse(
                 model,
+                tokenizer,
                 prompt,
                 target,
-                max_tokens=[max_tokens[i]],  # Pass as list for compatibility
+                max_tokens=[max_tokens[i]],
                 probe=args.probe,
                 probe_tokens=args.probe_tokens,
                 num_trials=args.num_trials,
