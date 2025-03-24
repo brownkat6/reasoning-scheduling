@@ -84,6 +84,58 @@ def load_model(model_name, url, api_key):
     return vllmClientModel(model_name, url, api_key)
 
 
+def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p, temperature, is_actives=None):
+    """Helper function to generate batch responses for local (non-vllm) models.
+    
+    Args:
+        model: The HuggingFace model instance
+        tokenizer: The tokenizer to use
+        prompts: List of prompts to process
+        max_new_tokens: Maximum number of new tokens to generate
+        top_p: Top-p sampling parameter
+        temperature: Temperature for sampling
+        is_actives: List of booleans indicating which prompts to process. If None, process all.
+    
+    Returns:
+        List of response objects mimicking vllm's response format
+    """
+    device = next(model.parameters()).device
+    responses = []
+    
+    if is_actives is None:
+        is_actives = [True] * len(prompts)
+    
+    for prompt, is_active in zip(prompts, is_actives):
+        if not is_active:
+            responses.append(None)
+            continue
+            
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        with torch.inference_mode():
+            output = model.generate(
+                inputs.input_ids,
+                attention_mask=inputs.attention_mask,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                top_p=top_p,
+                temperature=temperature,
+                pad_token_id=tokenizer.pad_token_id,
+                num_return_sequences=1
+            )
+            generated_text = tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+            # Create response object similar to vllm format
+            response = type('Response', (), {
+                'choices': [type('Choice', (), {
+                    'text': generated_text,
+                    'finish_reason': 'length' if len(output[0]) >= max_new_tokens else 'stop',
+                    'logprobs': None
+                })]
+            })
+            responses.append(response)
+    
+    return responses
+
+
 def execute_question_reuse(
     model,
     prompt,
@@ -108,8 +160,6 @@ def execute_question_reuse(
             tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
 
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
-        # print(f"Executing question {i} with max tokens {max_tokens[i]}")
-
         # Track which trials are finished
         if i == 0:
             is_finished = [False] * num_trials
@@ -122,30 +172,14 @@ def execute_question_reuse(
                     temperature=temperature,
                 )
             else:
-                responses = []
-                for trial_prompt in current_prompts:
-                    inputs = tokenizer(trial_prompt, return_tensors="pt").to(device)
-                    with torch.inference_mode():
-                        output = model.generate(
-                            inputs.input_ids,
-                            attention_mask=inputs.attention_mask,
-                            max_new_tokens=max_tokens[i],
-                            do_sample=True,
-                            top_p=top_p,
-                            temperature=temperature,
-                            pad_token_id=tokenizer.pad_token_id,
-                            num_return_sequences=1
-                        )
-                        generated_text = tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-                        # Create response object similar to vllm format
-                        response = type('Response', (), {
-                            'choices': [type('Choice', (), {
-                                'text': generated_text,
-                                'finish_reason': 'length' if len(output[0]) >= max_tokens[i] else 'stop',
-                                'logprobs': None
-                            })]
-                        })
-                        responses.append(response)
+                responses = generate_batch_local_model(
+                    model,
+                    tokenizer,
+                    current_prompts,
+                    max_new_tokens=max_tokens[i],
+                    top_p=top_p,
+                    temperature=temperature
+                )
         else:
             # Calculate remaining tokens needed
             remaining_tokens = max_tokens[i] - max_tokens[i - 1]
@@ -164,33 +198,15 @@ def execute_question_reuse(
                     temperature=temperature,
                 )
             else:
-                responses = []
-                for trial_idx, (trial_prompt, is_active) in enumerate(zip(current_prompts, [not f for f in is_finished])):
-                    if not is_active:
-                        responses.append(None)
-                        continue
-                    
-                    inputs = tokenizer(trial_prompt, return_tensors="pt").to(device)
-                    with torch.inference_mode():
-                        output = model.generate(
-                            inputs.input_ids,
-                            attention_mask=inputs.attention_mask,
-                            max_new_tokens=remaining_tokens,
-                            do_sample=True,
-                            top_p=top_p,
-                            temperature=temperature,
-                            pad_token_id=tokenizer.pad_token_id,
-                            num_return_sequences=1
-                        )
-                        generated_text = tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-                        response = type('Response', (), {
-                            'choices': [type('Choice', (), {
-                                'text': generated_text,
-                                'finish_reason': 'length' if len(output[0]) >= remaining_tokens else 'stop',
-                                'logprobs': None
-                            })]
-                        })
-                        responses.append(response)
+                responses = generate_batch_local_model(
+                    model,
+                    tokenizer,
+                    current_prompts,
+                    max_new_tokens=remaining_tokens,
+                    top_p=top_p,
+                    temperature=temperature,
+                    is_actives=[not finished for finished in is_finished]
+                )
 
         # Process responses and create completions
         completions = []
@@ -228,11 +244,22 @@ def execute_question_reuse(
             for current_prompt, completion in zip(current_prompts, completions)
         ]
         # Only generate probe responses for unfinished trials
-        probe_responses = model.generate_batch_probe(
-            probe_prompts,
-            max_tokens=probe_tokens,
-            is_actives=[not finished for finished in is_finished],
-        )
+        if is_vllm:
+            probe_responses = model.generate_batch_probe(
+                probe_prompts,
+                max_tokens=probe_tokens,
+                is_actives=[not finished for finished in is_finished],
+            )
+        else:
+            probe_responses = generate_batch_local_model(
+                model,
+                tokenizer,
+                probe_prompts,
+                max_new_tokens=probe_tokens,
+                top_p=top_p,
+                temperature=temperature,
+                is_actives=[not finished for finished in is_finished]
+            )
 
         round_results["probe_prompts"] = probe_prompts
         round_results["probe_responses"] = [
