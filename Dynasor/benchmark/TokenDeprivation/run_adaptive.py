@@ -98,6 +98,8 @@ def get_hidden_states(model, tokenizer, prompts):
     """Get hidden states using local model"""
     device = next(model.parameters()).device
     inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
+    # print the shape of the input ids
+    print(f"Input ids shape: {inputs['input_ids'].shape}")
     with torch.inference_mode():
         outputs = model(**inputs, output_hidden_states=True)
         hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
