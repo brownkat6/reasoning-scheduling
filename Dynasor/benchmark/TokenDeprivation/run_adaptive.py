@@ -98,9 +98,11 @@ def get_hidden_states(model, tokenizer, prompts, batch_size=16):
     """Get hidden states using local model in batches"""
     device = next(model.parameters()).device
     all_hidden_states = []
+    print(f"Getting hidden states for {len(prompts)} prompts")
     
     # Process prompts in batches
     for i in range(0, len(prompts), batch_size):
+        print(f"Processing batch {i//batch_size + 1} of {len(prompts)//batch_size}")
         batch_prompts = prompts[i:i + batch_size]
         inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True).to(device)
         
