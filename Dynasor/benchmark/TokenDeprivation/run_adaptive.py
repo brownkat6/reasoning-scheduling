@@ -94,16 +94,28 @@ def load_model_and_tokenizer(model_name, url=None, api_key=None, cache_dir=None)
         model.eval()
         return model, tokenizer
 
-def get_hidden_states(model, tokenizer, prompts):
-    """Get hidden states using local model"""
+def get_hidden_states(model, tokenizer, prompts, batch_size=16):
+    """Get hidden states using local model in batches"""
     device = next(model.parameters()).device
-    inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(device)
-    # print the shape of the input ids
-    print(f"Input ids shape: {inputs['input_ids'].shape}")
-    with torch.inference_mode():
-        outputs = model(**inputs, output_hidden_states=True)
-        hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
-    return hidden_states  # This will be on the same device as the model
+    all_hidden_states = []
+    
+    # Process prompts in batches
+    for i in range(0, len(prompts), batch_size):
+        batch_prompts = prompts[i:i + batch_size]
+        inputs = tokenizer(batch_prompts, return_tensors="pt", padding=True).to(device)
+        
+        with torch.inference_mode():
+            outputs = model(**inputs, output_hidden_states=True)
+            # Get hidden states from last layer, last token
+            batch_hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
+            all_hidden_states.append(batch_hidden_states)
+            
+        # Clear CUDA cache after each batch
+        torch.cuda.empty_cache()
+    
+    # Concatenate all batches
+    hidden_states = torch.cat(all_hidden_states, dim=0)
+    return hidden_states
 
 def optimize_token_allocation(predictions, token_budget, W=16):
     """
