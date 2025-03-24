@@ -194,6 +194,7 @@ def main():
             mlp_model = checkpoint['model'].cuda()
         else:
             config = checkpoint['config']
+            config['hidden_dim']=256
             mlp_model = MLP(
                 input_dim=config['input_dim'],
                 hidden_dim=config['hidden_dim'],
