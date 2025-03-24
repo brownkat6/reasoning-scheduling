@@ -8,6 +8,7 @@ from dynasor.core.evaluator import (
     extract_first_boxed_answer,
 )
 from clients import vllmClientModel, apply_chat_template
+import torch
 
 
 def parse_args():
@@ -82,9 +83,6 @@ def load_model(model_name, url, api_key):
 
     return vllmClientModel(model_name, url, api_key)
 
-'''
-
-'''
 
 def execute_question_reuse(
     model,
@@ -100,21 +98,52 @@ def execute_question_reuse(
     temperature=0.6,
 ):
     results = []
-    # current_prompts = [model.prepare_prompt(prompt) for _ in range(num_trials)]
     current_prompts = [apply_chat_template(prompt, model.config._name_or_path) for _ in range(num_trials)]
+    is_vllm = isinstance(model, vllmClientModel)
+    
+    if not is_vllm:
+        device = next(model.parameters()).device
+        tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
+
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         # print(f"Executing question {i} with max tokens {max_tokens[i]}")
 
         # Track which trials are finished
         if i == 0:
             is_finished = [False] * num_trials
-            responses = model.generate_batch(
-                current_prompts,
-                max_tokens=max_tokens[i],
-                is_actives=[True] * num_trials,
-                top_p=top_p,
-                temperature=temperature,
-            )
+            if is_vllm:
+                responses = model.generate_batch(
+                    current_prompts,
+                    max_tokens=max_tokens[i],
+                    is_actives=[True] * num_trials,
+                    top_p=top_p,
+                    temperature=temperature,
+                )
+            else:
+                responses = []
+                for trial_prompt in current_prompts:
+                    inputs = tokenizer(trial_prompt, return_tensors="pt").to(device)
+                    with torch.inference_mode():
+                        output = model.generate(
+                            inputs.input_ids,
+                            attention_mask=inputs.attention_mask,
+                            max_new_tokens=max_tokens[i],
+                            do_sample=True,
+                            top_p=top_p,
+                            temperature=temperature,
+                            pad_token_id=tokenizer.pad_token_id,
+                            num_return_sequences=1
+                        )
+                        generated_text = tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+                        # Create response object similar to vllm format
+                        response = type('Response', (), {
+                            'choices': [type('Choice', (), {
+                                'text': generated_text,
+                                'finish_reason': 'length' if len(output[0]) >= max_tokens[i] else 'stop',
+                                'logprobs': None
+                            })]
+                        })
+                        responses.append(response)
         else:
             # Calculate remaining tokens needed
             remaining_tokens = max_tokens[i] - max_tokens[i - 1]
@@ -124,15 +153,44 @@ def execute_question_reuse(
                 for current_prompt, completion in zip(current_prompts, completions)
             ]
             # Only generate for unfinished trials
-            responses = model.generate_batch(
-                current_prompts,
-                max_tokens=remaining_tokens,
-                is_actives=[not finished for finished in is_finished],
-                top_p=top_p,
-                temperature=temperature,
-            )
+            if is_vllm:
+                responses = model.generate_batch(
+                    current_prompts,
+                    max_tokens=remaining_tokens,
+                    is_actives=[not finished for finished in is_finished],
+                    top_p=top_p,
+                    temperature=temperature,
+                )
+            else:
+                responses = []
+                for trial_idx, (trial_prompt, is_active) in enumerate(zip(current_prompts, [not f for f in is_finished])):
+                    if not is_active:
+                        responses.append(None)
+                        continue
+                    
+                    inputs = tokenizer(trial_prompt, return_tensors="pt").to(device)
+                    with torch.inference_mode():
+                        output = model.generate(
+                            inputs.input_ids,
+                            attention_mask=inputs.attention_mask,
+                            max_new_tokens=remaining_tokens,
+                            do_sample=True,
+                            top_p=top_p,
+                            temperature=temperature,
+                            pad_token_id=tokenizer.pad_token_id,
+                            num_return_sequences=1
+                        )
+                        generated_text = tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+                        response = type('Response', (), {
+                            'choices': [type('Choice', (), {
+                                'text': generated_text,
+                                'finish_reason': 'length' if len(output[0]) >= remaining_tokens else 'stop',
+                                'logprobs': None
+                            })]
+                        })
+                        responses.append(response)
 
-        # print(responses)
+        # Process responses and create completions
         completions = []
         for trial in range(num_trials):
             if is_finished[trial]:
