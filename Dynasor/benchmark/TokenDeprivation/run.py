@@ -7,7 +7,7 @@ from dynasor.core.evaluator import (
     math_equal,
     extract_first_boxed_answer,
 )
-from clients import vllmClientModel
+from clients import vllmClientModel, apply_chat_template
 
 
 def parse_args():
@@ -100,7 +100,8 @@ def execute_question_reuse(
     temperature=0.6,
 ):
     results = []
-    current_prompts = [model.prepare_prompt(prompt) for _ in range(num_trials)]
+    # current_prompts = [model.prepare_prompt(prompt) for _ in range(num_trials)]
+    current_prompts = [apply_chat_template(prompt, model.config._name_or_path) for _ in range(num_trials)]
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         # print(f"Executing question {i} with max tokens {max_tokens[i]}")
 
