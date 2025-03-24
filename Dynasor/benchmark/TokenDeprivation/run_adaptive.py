@@ -164,7 +164,8 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     expected_reward_allocation = np.mean([predictions[i][allocations[i]//W] for i in range(num_queries)])
     print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
     print(f"Expected reward under allocation: {expected_reward_allocation}")
-    print(f"Allocation: {allocations}")
+    from collections import Counter
+    print(f"Allocation counts: {Counter(allocations)}")
     
     return allocations.tolist()
 
@@ -252,7 +253,6 @@ def main():
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
             execute_question_reuse(
                 model,
-                tokenizer,
                 prompt,
                 target,
                 max_tokens=[max_tokens[i]],
