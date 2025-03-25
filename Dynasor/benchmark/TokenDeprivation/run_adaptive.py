@@ -14,6 +14,7 @@ import os
 #print(f"Adding {os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))} to path")
 import torch.nn as nn
 from datetime import datetime
+import random
 
 class MLP(nn.Module):
     def __init__(self, input_dim=1536, hidden_dim=256, output_dim=16):
@@ -160,8 +161,9 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     # print what the expected reward under prediction are under allocation, and compare it to the expected reward if all queries
     # were allocated token_budget uniformly
-    expected_reward_uniform = np.mean([predictions[i][token_budget//W] for i in range(num_queries)])
-    expected_reward_allocation = np.mean([predictions[i][allocations[i]//W] for i in range(num_queries)])
+    print(predictions,"predictions")
+    expected_reward_uniform = np.mean([predictions[i][token_budget//W - 1] for i in range(num_queries)])
+    expected_reward_allocation = np.mean([predictions[i][allocations[i]//W - 1] for i in range(num_queries)])
     print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
     print(f"Expected reward under allocation: {expected_reward_allocation}")
     from collections import Counter
@@ -169,9 +171,25 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     return allocations.tolist()
 
+def set_deterministic_mode():
+    """Set all random seeds and ensure deterministic operations."""
+    # Set seeds for all sources of randomness
+    torch.manual_seed(42)  # Use a fixed seed
+    random.seed(42)
+    np.random.seed(42)
+    
+    # Make CUDA operations deterministic
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(42)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
 def main():
     args = parse_args()
-    set_seed(args.seed)
+    
+    # Instead of using args.seed, we set fixed seeds for all processes
+    set_deterministic_mode()
+    
     data = load_dataset(args.dataset)
     cache_dir = "/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers"
 
@@ -245,7 +263,7 @@ def main():
         # Calculate expected reward under optimized allocation
         optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
         print(f"Expected reward under allocation: {optimized_reward}")
-        # print(f"Allocation: {max_tokens}")
+        print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
