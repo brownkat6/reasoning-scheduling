@@ -165,9 +165,10 @@ def optimize_token_allocation(predictions, token_budget, W=16):
                 window_increase+=1
             # if allgains values are -1, break
             if all([g == -1 for g in gains]):
-                print(f"No more gains, breaking after checking {window_increase} windows",gains)
+                print(f"No more gains, breaking after checking {window_increase} windows")
                 break
-        
+        if best_gain == -1:
+            break
         # Allocate W more tokens to the best query
         allocations[best_query] += W
         remaining_budget -= W
