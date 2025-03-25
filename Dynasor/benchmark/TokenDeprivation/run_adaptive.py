@@ -128,6 +128,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     W: window size (16)
     Returns: list of token allocations for each query
     """
+    print(f"Optimizing token allocation for {len(predictions)} queries with token budget {token_budget} and W {W}")
     num_queries = len(predictions)
     max_positions = len(predictions[0])
     
@@ -139,7 +140,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     # Calculate how many more tokens we can allocate
     remaining_budget = token_budget * num_queries - np.sum(allocations)
-    
+    print(remaining_budget,"remaining budget")
     while remaining_budget >= W:
         # For each query, calculate potential gain from adding W tokens
         gains = []
@@ -263,7 +264,7 @@ def main():
         # Calculate expected reward under optimized allocation
         optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
         print(f"Expected reward under allocation: {optimized_reward}")
-        print(f"Allocation: {max_tokens}")
+        # print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
