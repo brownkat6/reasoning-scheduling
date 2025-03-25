@@ -154,6 +154,8 @@ def optimize_token_allocation(predictions, token_budget, W=16):
         # Find query with maximum gain
         best_query = np.argmax(gains)
         if gains[best_query] <= 0:
+            print("No more gains, breaking",gains)
+            print("predictions",pred_array)
             break
         
         # Allocate W more tokens to the best query
