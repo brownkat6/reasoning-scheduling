@@ -23,7 +23,7 @@ mkdir -p "${OUTPUT_DIR}"
 set -x
 
 # Run the adaptive token deprivation experiment
-python -u run_adaptive.py \
+/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u Dynasor/benchmark/TokenDeprivation/run_adaptive.py \
     --dataset gsm8k \
     --mlp_train_dataset gsm8k \
     --mlp_train_split train \
