@@ -9,6 +9,9 @@ from dynasor.core.evaluator import (
 )
 from clients import vllmClientModel, apply_chat_template
 import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import os
+from datetime import datetime
 
 
 def parse_args():
@@ -79,9 +82,23 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_model(model_name, url, api_key):
+def load_model_and_tokenizer(model_name, cache_dir=None):
+    """Load model and tokenizer from HuggingFace."""
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_name,
+        cache_dir=cache_dir,
+        padding_side="left",
+        trust_remote_code=True
+    )
+    tokenizer.pad_token = tokenizer.eos_token
 
-    return vllmClientModel(model_name, url, api_key)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        cache_dir=cache_dir,
+        device_map="auto",
+        trust_remote_code=True
+    )
+    return model, tokenizer
 
 
 def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p, temperature, is_actives=None, batch_size=16):
@@ -327,12 +344,9 @@ def main():
     args = parse_args()
     set_seed(args.seed)
     data = load_dataset(args.dataset)
+    cache_dir = "/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers"
 
-    num_trials = args.num_trials  # Number of trials per question
-
-    import os
-    from datetime import datetime
-
+    # Create output directory
     if args.output:
         output_dir = args.output
         os.makedirs(output_dir, exist_ok=True)
@@ -342,7 +356,9 @@ def main():
         model_name = args.model.replace("/", "-")
         output_dir = f"results/{model_name}_{args.dataset}_step{args.step}_max{args.max_tokens}_trials{args.num_trials}_{timestamp}"
         os.makedirs(output_dir, exist_ok=True)
-    model = load_model(args.model, args.url, args.api_key)
+
+    # Replace load_model with load_model_and_tokenizer
+    model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
 
     for problem_id, item in enumerate(data):
         if problem_id < args.start:
@@ -364,11 +380,12 @@ def main():
             max_tokens=token_budgets,
             probe=args.probe,
             probe_tokens=args.probe_tokens,
-            num_trials=num_trials,
+            num_trials=args.num_trials,
             problem_id=problem_id,
             output_dir=output_dir,
             top_p=args.top_p,
             temperature=args.temperature,
+            tokenizer=tokenizer,  # Pass tokenizer to execute_question_reuse
         )
 
     print("Saved results to", output_dir)
