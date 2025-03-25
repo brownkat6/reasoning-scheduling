@@ -231,7 +231,7 @@ def main():
 
     # Process each token budget
     token_budgets = list(range(args.step, args.max_tokens + args.step, args.step))
-    
+    print(token_budgets,"token budgets")
     for token_budget in token_budgets:
         print(f"\nProcessing token budget: {token_budget}")
         
@@ -249,6 +249,9 @@ def main():
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
+        # TODO: don't truncate to first 100 questions
+        prompts = prompts[:100]
+        targets = targets[:100]
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
             execute_question_reuse(
