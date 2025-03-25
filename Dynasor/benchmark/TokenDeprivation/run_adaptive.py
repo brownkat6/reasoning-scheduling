@@ -207,7 +207,7 @@ def main():
     else:
         # Load and use MLP for predictions
         mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
-        checkpoint = torch.load(mlp_path, map_location='cuda')
+        checkpoint = torch.load(mlp_path, map_location='cuda', weights_only=False)
         if 'model' in checkpoint:
             mlp_model = checkpoint['model'].cuda()
         else:
