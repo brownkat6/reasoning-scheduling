@@ -138,7 +138,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     # Initialize with minimum tokens
     allocations = np.ones(num_queries, dtype=int) * W
-    print(f"Allocation counts before increase: {Counter(allocations)}")
+    # print(f"Allocation counts before increase: {Counter(allocations)}")
     
     # Calculate how many more tokens we can allocate
     remaining_budget = token_budget * num_queries - np.sum(allocations)
@@ -175,7 +175,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     print(remaining_budget,"remaining budget after allocating additional tokens")
     # print what the expected reward under prediction are under allocation, and compare it to the expected reward if all queries
     # were allocated token_budget uniformly
-    print(predictions,"predictions")
+    # print(predictions,"predictions")
     expected_reward_uniform = np.mean([predictions[i][token_budget//W - 1] for i in range(num_queries)])
     expected_reward_allocation = np.mean([predictions[i][allocations[i]//W - 1] for i in range(num_queries)])
     print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
@@ -223,7 +223,7 @@ def main():
 
     if args.use_oracle:
         # Load oracle data from grouped CSV
-        oracle_file = f"data/{args.dataset}_results/{args.dataset}_results_{args.split}_grouped.csv"
+        oracle_file = f"data/{args.dataset}_results/{args.dataset}_results_{args.mlp_train_split}_grouped.csv"
         if not os.path.exists(oracle_file):
             raise ValueError(f"Oracle data not found at {oracle_file}")
         
