@@ -28,7 +28,7 @@ python -u run_adaptive.py \
     --mlp_train_dataset gsm8k \
     --mlp_train_split train \
     --model deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B \
-    --max-tokens 2048 \
+    --max-tokens 256 \
     --step 32 \
     --num-trials 10 \
     --temperature 0.6 \

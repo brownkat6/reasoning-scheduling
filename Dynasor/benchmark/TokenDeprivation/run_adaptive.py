@@ -266,6 +266,10 @@ def main():
     for token_budget in token_budgets:
         print(f"\nProcessing token budget: {token_budget}")
         
+        # Create subdirectory for this token budget
+        budget_dir = os.path.join(output_dir, f"budget_{token_budget}")
+        os.makedirs(budget_dir, exist_ok=True)
+        
         # Calculate expected reward under uniform allocation
         uniform_reward = np.mean([predictions[i][token_budget//16 - 1] for i in range(len(predictions))])
         print(f"Expected reward under uniform allocation: {uniform_reward}")
@@ -276,7 +280,7 @@ def main():
         # Calculate expected reward under optimized allocation
         optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
         print(f"Expected reward under allocation: {optimized_reward}")
-        # print(f"Allocation: {max_tokens}")
+        print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
@@ -294,7 +298,7 @@ def main():
                 probe_tokens=args.probe_tokens,
                 num_trials=args.num_trials,
                 problem_id=i+args.start,
-                output_dir=output_dir,
+                output_dir=budget_dir,  # Save in budget-specific subdirectory
                 top_p=args.top_p,
                 temperature=args.temperature,
                 tokenizer=tokenizer,

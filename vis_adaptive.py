@@ -99,25 +99,72 @@ def create_comparison_plot(adaptive_dir, nonadaptive_dir, oracle_dir, model_name
     plt.savefig(f'figures/token_accuracy_improvement_{dataset_name}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-def main():
-    parser = argparse.ArgumentParser(description='Visualize adaptive vs non-adaptive results')
-    parser.add_argument('--model', type=str, required=True, help='Model name')
-    parser.add_argument('--dataset', type=str, required=True, help='Dataset name')
-    parser.add_argument('--adaptive-dir', type=str, required=True, help='Directory with adaptive results')
-    parser.add_argument('--nonadaptive-dir', type=str, required=True, help='Directory with non-adaptive results')
-    parser.add_argument('--oracle-dir', type=str, help='Directory with oracle results (optional)')
+def load_adaptive_results(adaptive_dir):
+    """Load results from adaptive runs with budget subdirectories."""
+    token_budgets = []
+    accuracies = []
     
+    # Find all budget subdirectories
+    budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
+    
+    for budget_dir in budget_dirs:
+        # Extract token budget from directory name
+        token_budget = int(budget_dir.split("_")[-1])
+        token_budgets.append(token_budget)
+        
+        # Load all question results from this budget directory
+        question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
+        correct_count = 0
+        total_count = 0
+        
+        for qfile in question_files:
+            with open(qfile, 'r') as f:
+                data = json.load(f)
+                # Average across trials for this question
+                is_corrects = data.get('is_corrects', [])
+                if is_corrects:
+                    correct_count += sum(is_corrects)
+                    total_count += len(is_corrects)
+        
+        if total_count > 0:
+            accuracies.append(correct_count / total_count * 100)
+        else:
+            accuracies.append(0)
+    
+    return token_budgets, accuracies
+
+def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
+    # Load adaptive results with new directory structure
+    adaptive_tokens, adaptive_accuracies = load_adaptive_results(adaptive_dir)
+    
+    # Load non-adaptive results (unchanged)
+    nonadaptive_tokens, nonadaptive_accuracies = load_results(nonadaptive_dir)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', label='Adaptive')
+    plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', label='Non-adaptive')
+    
+    if oracle_dir:
+        oracle_tokens, oracle_accuracies = load_adaptive_results(oracle_dir)
+        plt.plot(oracle_tokens, oracle_accuracies, 'g-', label='Oracle')
+    
+    plt.xlabel('Token Budget')
+    plt.ylabel('Average Accuracy (%)')
+    plt.title('Accuracy vs Token Budget')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model', type=str, required=True)
+    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--adaptive-dir', type=str, required=True)
+    parser.add_argument('--nonadaptive-dir', type=str, required=True)
+    parser.add_argument('--oracle-dir', type=str)
     args = parser.parse_args()
     
-    create_comparison_plot(
-        args.adaptive_dir,
-        args.nonadaptive_dir,
-        args.oracle_dir,
-        args.model,
-        args.dataset
-    )
-    
-    print(f"Generated visualizations in figures/")
+    plot_results(args.adaptive_dir, args.nonadaptive_dir, args.oracle_dir)
 
 if __name__ == '__main__':
     main() 

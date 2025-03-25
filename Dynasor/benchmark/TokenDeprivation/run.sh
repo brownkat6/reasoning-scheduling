@@ -23,9 +23,9 @@ python -u "${SCRIPT_DIR}/run.py" \
     --model "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" \
     --dataset "gsm8k" \
     --step 32 \
-    --max-tokens 2048 \
+    --max-tokens 256 \
     --start 0 \
-    --end 10 \
+    --end 20 \
     --output "${OUTPUT_DIR}/gsm8k_step32_max16384_trials10" \
     --probe-tokens 32 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
