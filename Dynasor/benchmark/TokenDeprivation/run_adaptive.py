@@ -151,7 +151,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
             gains = []
             for i in range(num_queries):
                 current_pos = allocations[i] // W - 1
-                if current_pos + 1 >= max_positions:
+                if current_pos + window_increase >= max_positions:
                     gains.append(-1)  # Can't allocate more tokens
                 else:
                     gains.append(pred_array[i][current_pos + window_increase] - pred_array[i][current_pos])
