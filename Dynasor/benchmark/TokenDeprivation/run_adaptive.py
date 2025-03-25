@@ -223,7 +223,7 @@ def main():
 
     if args.use_oracle:
         # Load oracle data from grouped CSV
-        oracle_file = f"data/{args.dataset}_results/{args.dataset}_results_{args.mlp_train_split}_grouped.csv"
+        oracle_file = f"/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/data/{args.dataset}_results/{args.dataset}_results_{args.mlp_train_split}_grouped.csv"
         if not os.path.exists(oracle_file):
             raise ValueError(f"Oracle data not found at {oracle_file}")
         
