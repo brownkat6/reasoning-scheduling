@@ -143,20 +143,28 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     print(remaining_budget,"remaining budget")
     while remaining_budget >= W:
         # For each query, calculate potential gain from adding W tokens
-        gains = []
-        for i in range(num_queries):
-            current_pos = allocations[i] // W - 1
-            if current_pos + 1 >= max_positions:
-                gains.append(-1)  # Can't allocate more tokens
-            else:
-                gains.append(pred_array[i][current_pos + 1] - pred_array[i][current_pos])
-        
-        # Find query with maximum gain
-        best_query = np.argmax(gains)
-        if gains[best_query] <= 0:
-            print("No more gains, breaking",gains)
-            print("predictions",pred_array)
-            break
+        best_gain=-1
+        window_increase=1
+        while best_gain < 0:
+            gains = []
+            for i in range(num_queries):
+                current_pos = allocations[i] // W - 1
+                if current_pos + 1 >= max_positions:
+                    gains.append(-1)  # Can't allocate more tokens
+                else:
+                    gains.append(pred_array[i][current_pos + window_increase] - pred_array[i][current_pos])
+            
+            # Find query with maximum gain
+            best_query = np.argmax(gains)
+            best_gain = gains[best_query]
+            if gains[best_query] <= 0:
+                # print("No more gains, breaking",gains)
+                # break
+                window_increase=1
+            # if allgains values are -1, break
+            if all(gains == -1):
+                print(f"No more gains, breaking after checking {window_increase} windows",gains)
+                break
         
         # Allocate W more tokens to the best query
         allocations[best_query] += W
