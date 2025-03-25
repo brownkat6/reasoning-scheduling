@@ -245,7 +245,7 @@ def main():
         # Calculate expected reward under optimized allocation
         optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
         print(f"Expected reward under allocation: {optimized_reward}")
-        print(f"Allocation: {max_tokens}")
+        # print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
