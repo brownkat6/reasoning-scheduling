@@ -84,7 +84,7 @@ def load_model(model_name, url, api_key):
     return vllmClientModel(model_name, url, api_key)
 
 
-def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p, temperature, is_actives=None):
+def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p, temperature, is_actives=None, batch_size=16):
     """Helper function to generate batch responses for local (non-vllm) models.
     
     Args:
@@ -95,6 +95,7 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
         top_p: Top-p sampling parameter
         temperature: Temperature for sampling
         is_actives: List of booleans indicating which prompts to process. If None, process all.
+        batch_size: Number of prompts to process in each batch
     
     Returns:
         List of response objects mimicking vllm's response format
@@ -105,14 +106,23 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     if is_actives is None:
         is_actives = [True] * len(prompts)
     
-    for prompt, is_active in zip(prompts, is_actives):
-        if not is_active:
-            responses.append(None)
-            continue
-            
-        inputs = tokenizer(prompt, return_tensors="pt").to(device)
+    # Filter active prompts
+    active_prompts = [(i, prompt) for i, (prompt, is_active) in enumerate(zip(prompts, is_actives)) if is_active]
+    
+    # Process in batches
+    for i in range(0, len(active_prompts), batch_size):
+        batch_indices, batch_prompts = zip(*active_prompts[i:i + batch_size])
+        
+        # Tokenize entire batch at once
+        inputs = tokenizer(
+            list(batch_prompts), 
+            return_tensors="pt", 
+            padding=True, 
+            truncation=True
+        ).to(device)
+        
         with torch.inference_mode():
-            output = model.generate(
+            outputs = model.generate(
                 inputs.input_ids,
                 attention_mask=inputs.attention_mask,
                 max_new_tokens=max_new_tokens,
@@ -122,18 +132,28 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
                 pad_token_id=tokenizer.pad_token_id,
                 num_return_sequences=1
             )
-            generated_text = tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-            # Create response object similar to vllm format
-            response = type('Response', (), {
-                'choices': [type('Choice', (), {
-                    'text': generated_text,
-                    'finish_reason': 'length' if len(output[0]) >= max_new_tokens else 'stop',
-                    'logprobs': None
-                })]
-            })
-            responses.append(response)
+            
+            # Process each output in the batch
+            batch_responses = []
+            for j, output in enumerate(outputs):
+                input_length = inputs.input_ids[j].ne(tokenizer.pad_token_id).sum()
+                generated_text = tokenizer.decode(output[input_length:], skip_special_tokens=True)
+                
+                response = type('Response', (), {
+                    'choices': [type('Choice', (), {
+                        'text': generated_text,
+                        'finish_reason': 'length' if len(output) >= max_new_tokens else 'stop',
+                        'logprobs': None
+                    })]
+                })
+                batch_responses.append(response)
     
-    return responses
+    # Reconstruct full response list with None for inactive prompts
+    full_responses = [None] * len(prompts)
+    for (idx, _), response in zip(active_prompts, batch_responses):
+        full_responses[idx] = response
+    
+    return full_responses
 
 
 def execute_question_reuse(
@@ -158,7 +178,7 @@ def execute_question_reuse(
         device = next(model.parameters()).device
         if tokenizer is None:
             tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
-
+    print(len(max_tokens),"max tokens to execute")
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         # Track which trials are finished
         if i == 0:
