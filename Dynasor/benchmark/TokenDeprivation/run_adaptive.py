@@ -164,7 +164,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
                 # break
                 window_increase=1
             # if allgains values are -1, break
-            if all(gains == -1):
+            if all([g == -1 for g in gains]):
                 print(f"No more gains, breaking after checking {window_increase} windows",gains)
                 break
         
