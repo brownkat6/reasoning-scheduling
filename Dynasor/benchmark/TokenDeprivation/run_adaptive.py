@@ -137,6 +137,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     # Initialize with minimum tokens
     allocations = np.ones(num_queries, dtype=int) * W
+    print(f"Allocation counts before increase: {Counter(allocations)}")
     
     # Calculate how many more tokens we can allocate
     remaining_budget = token_budget * num_queries - np.sum(allocations)
