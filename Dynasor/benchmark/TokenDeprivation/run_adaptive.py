@@ -15,6 +15,7 @@ import os
 import torch.nn as nn
 from datetime import datetime
 import random
+from collections import Counter
 
 class MLP(nn.Module):
     def __init__(self, input_dim=1536, hidden_dim=256, output_dim=16):
@@ -178,7 +179,6 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     expected_reward_allocation = np.mean([predictions[i][allocations[i]//W - 1] for i in range(num_queries)])
     print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
     print(f"Expected reward under allocation: {expected_reward_allocation}")
-    from collections import Counter
     print(f"Allocation counts: {Counter(allocations)}")
     
     return allocations.tolist()
