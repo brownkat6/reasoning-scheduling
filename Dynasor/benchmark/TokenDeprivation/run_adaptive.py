@@ -169,7 +169,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
         # Allocate W more tokens to the best query
         allocations[best_query] += W
         remaining_budget -= W
-    
+    print(remaining_budget,"remaining budget after allocating additional tokens")
     # print what the expected reward under prediction are under allocation, and compare it to the expected reward if all queries
     # were allocated token_budget uniformly
     print(predictions,"predictions")
