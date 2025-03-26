@@ -36,4 +36,4 @@ set -x
     --probe-tokens 32 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"
-    
+set +x

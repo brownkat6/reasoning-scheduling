@@ -37,4 +37,4 @@ set -x
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     --use-oracle \
     "$@"
-    
+set +x

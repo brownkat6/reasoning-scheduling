@@ -99,7 +99,7 @@ def load_gsm8k_dataset():
     test_data = []
     
     for i, sample in enumerate(ds_train):
-        question = sample["problem"]
+        question = sample["question"]
         answer_field = sample["answer"]
         if "#### " in answer_field:
             ground_truth = answer_field.split("#### ")[-1].strip() if "#### " in answer_field else answer_field.strip()
@@ -108,7 +108,7 @@ def load_gsm8k_dataset():
         train_data.append({"id": f"train_{i}", "problem": question, "answer": ground_truth})
     
     for i, sample in enumerate(ds_test):
-        question = sample["problem"]
+        question = sample["question"]
         answer_field = sample["answer"]
         if "#### " in answer_field:
             ground_truth = answer_field.split("#### ")[-1].strip()

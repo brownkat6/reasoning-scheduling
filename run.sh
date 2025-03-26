@@ -19,7 +19,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 # Run the token deprivation experiment
 set -x
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "${SCRIPT_DIR}/run.py" \
+/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "Dynasor/benchmark/TokenDeprivation/run.py" \
     --model "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" \
     --dataset "gsm8k" \
     --step 32 \

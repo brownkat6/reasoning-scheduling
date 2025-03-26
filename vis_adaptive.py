@@ -11,6 +11,10 @@ from collections import defaultdict
 # TODO: change accuracy to reflect accuracy across questions, not across trials, e.g. question is 
 # correct if the answer is the mode 
 
+# TODO: why is oracle accuracy LESS than non-adaptive accuracy?
+# Check predicted vs actual accuracies
+# Regenerate ground truth data for gsm8k first train batch (i think the prompting changed at some point)
+
 def load_results(results_dir):
     """Load results from json files in the given directory"""
     # Dictionary to store results for each token budget
