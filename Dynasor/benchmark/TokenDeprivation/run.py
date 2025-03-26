@@ -186,6 +186,7 @@ def execute_question_reuse(
     top_p=0.95,
     temperature=0.6,
     tokenizer=None,
+    predicted_score=None,
 ):
     results = []
     current_prompts = [apply_chat_template(prompt, model.config._name_or_path) for _ in range(num_trials)]
@@ -310,14 +311,12 @@ def execute_question_reuse(
                 finished_result = extract_answer(
                     current_prompts[trial] + completions[trial][0], "aime24"
                 )
-                # print('Result Corrects: ', finished_result, target, math_equal(finished_result, target))
                 is_corrects.append(math_equal(finished_result, target))
             else:
                 probe_result = extract_first_boxed_answer(
                     probe_prompts[trial] + probe_responses[trial].choices[0].text,
                     "aime24",
                 )
-                # print('Probe Corrects: ', probe_result, target, math_equal(probe_result, target))
                 is_corrects.append(math_equal(probe_result, target))
 
             is_corrects_original.append(
@@ -328,6 +327,13 @@ def execute_question_reuse(
                     target,
                 )
             )
+
+        # Calculate and print actual proportion
+        if predicted_score is not None:
+            actual_proportion = sum(is_corrects) / len(is_corrects)
+            print(f"Question {problem_id} - Token budget {max_tokens[i]}:")
+            print(f"  Predicted proportion correct: {predicted_score:.3f}")
+            print(f"  Actual proportion correct:    {actual_proportion:.3f}")
 
         round_results["is_corrects"] = is_corrects
         round_results["is_corrects_original"] = is_corrects_original
