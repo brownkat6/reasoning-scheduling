@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from glob import glob
 import argparse
 from datetime import datetime
+from collections import defaultdict
 
 def load_results(results_dir):
     """Load results from json files in the given directory"""
@@ -105,76 +106,103 @@ def load_adaptive_results(adaptive_dir):
     """Load results from adaptive runs with budget subdirectories."""
     token_budgets = []
     accuracies = []
-    total_questions = 0
-    total_files = 0
+    question_counts = []  # New list to track question counts
     
     print(f"\nLoading adaptive results from root directory: {adaptive_dir}")
     
     # Find all budget subdirectories
-    budget_dirs = sorted(glob(os.path.join(adaptive_dir, "budget_*")))
+    budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
     print(f"Found {len(budget_dirs)} budget subdirectories")
     
     for budget_dir in budget_dirs:
-        # Extract token budget from directory name
         token_budget = int(budget_dir.split("_")[-1])
         token_budgets.append(token_budget)
         
-        # Load all question results from this budget directory
-        question_files = glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
-        total_files += len(question_files)
+        question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
         correct_count = 0
         total_count = 0
-        
-        #print(f"\nProcessing budget directory: {budget_dir}")
-        #print(f"Found {len(question_files)} question files")
+        num_questions = 0  # Track number of questions for this budget
         
         for qfile in question_files:
             with open(qfile, 'r') as f:
                 data = json.load(f)
-                # Average across trials for this question
                 is_corrects = data.get('is_corrects', [])
                 if is_corrects:
                     correct_count += sum(is_corrects)
                     total_count += len(is_corrects)
-                    total_questions += 1
+                    num_questions += 1
         
+        question_counts.append(num_questions)  # Store count for this budget
         if total_count > 0:
             accuracies.append(correct_count / total_count * 100)
         else:
             accuracies.append(0)
     
-    print(f"\nSummary:")
-    print(f"Total question records processed: {total_questions}")
-    print(f"Total files loaded: {total_files}")
-    print(f"Average questions per budget: {total_questions/len(budget_dirs) if budget_dirs else 0:.2f}")
+    return token_budgets, accuracies, question_counts
+
+def load_results(results_dir):
+    """Load results from non-adaptive runs."""
+    token_budgets = []
+    accuracies = []
+    question_counts = []  # New list to track question counts
     
-    # before returning, sort token_budgets and accuracies in ascending order of token_budgets
-    token_budgets, accuracies = zip(*sorted(zip(token_budgets, accuracies)))
-    return token_budgets, accuracies
+    # Group files by token budget
+    budget_files = defaultdict(list)
+    for qfile in glob.glob(os.path.join(results_dir, "question_*_tokens_*.json")):
+        with open(qfile, 'r') as f:
+            data = json.load(f)
+            budget = data.get('max_tokens')
+            budget_files[budget].append(data)
+    
+    # Process each budget level
+    for budget in sorted(budget_files.keys()):
+        token_budgets.append(budget)
+        correct_count = 0
+        total_count = 0
+        num_questions = len(budget_files[budget])  # Count questions for this budget
+        
+        for data in budget_files[budget]:
+            is_corrects = data.get('is_corrects', [])
+            if is_corrects:
+                correct_count += sum(is_corrects)
+                total_count += len(is_corrects)
+        
+        question_counts.append(num_questions)  # Store count for this budget
+        if total_count > 0:
+            accuracies.append(correct_count / total_count * 100)
+        else:
+            accuracies.append(0)
+    
+    return token_budgets, accuracies, question_counts
 
 def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
-    # Load adaptive results with new directory structure
-    adaptive_tokens, adaptive_accuracies = load_adaptive_results(adaptive_dir)
+    # Load results with question counts
+    adaptive_tokens, adaptive_accuracies, adaptive_counts = load_adaptive_results(adaptive_dir)
     print("\nAdaptive Results:")
-    print(f"Token budgets: {adaptive_tokens}")
-    print(f"Accuracies: {[f'{acc:.2f}%' for acc in adaptive_accuracies]}")
+    print("Token Budget | Accuracy | Questions")
+    print("-" * 40)
+    for t, a, c in zip(adaptive_tokens, adaptive_accuracies, adaptive_counts):
+        print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
-    # Load non-adaptive results (unchanged)
-    nonadaptive_tokens, nonadaptive_accuracies = load_results(nonadaptive_dir)
+    nonadaptive_tokens, nonadaptive_accuracies, nonadaptive_counts = load_results(nonadaptive_dir)
     print("\nNon-adaptive Results:")
-    print(f"Token budgets: {nonadaptive_tokens}")
-    print(f"Accuracies: {[f'{acc:.2f}%' for acc in nonadaptive_accuracies]}")
+    print("Token Budget | Accuracy | Questions")
+    print("-" * 40)
+    for t, a, c in zip(nonadaptive_tokens, nonadaptive_accuracies, nonadaptive_counts):
+        print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
     plt.figure(figsize=(10, 6))
     plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', marker='o', label='Adaptive')
     plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
-        oracle_tokens, oracle_accuracies = load_adaptive_results(oracle_dir)
+        oracle_tokens, oracle_accuracies, oracle_counts = load_adaptive_results(oracle_dir)
         plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
         print("\nOracle Results:")
-        print(f"Token budgets: {oracle_tokens}")
-        print(f"Accuracies: {[f'{acc:.2f}%' for acc in oracle_accuracies]}")
+        print("Token Budget | Accuracy | Questions")
+        print("-" * 40)
+        for t, a, c in zip(oracle_tokens, oracle_accuracies, oracle_counts):
+            print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
