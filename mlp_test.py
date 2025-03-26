@@ -632,19 +632,7 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
 
     print(f"Training questions: {X_train.shape[0]}, Testing questions: {X_test.shape[0]}")
 
-    class MLP(nn.Module):
-        def __init__(self, input_dim=1536, hidden_dim=128, output_dim=256):
-            super(MLP, self).__init__()
-            self.fc1 = nn.Linear(input_dim, hidden_dim)
-            #self.fc2 = nn.Linear(hidden_dim, hidden_dim)  # Second hidden layer
-            self.fc2 = nn.Linear(hidden_dim, output_dim)  # Output layer
-            self.relu = nn.ReLU()
-
-        def forward(self, x):
-            x = self.fc1(x)
-            x = self.relu(x)
-            x = self.fc2(x)
-            return x
+    from mlp import MLP
 
     model_mlp = MLP(input_dim=1536, hidden_dim=256, output_dim=Y_train.shape[1]).to('cuda')  # Move model to CUDA
     criterion = nn.MSELoss()

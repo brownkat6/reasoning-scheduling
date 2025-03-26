@@ -10,26 +10,13 @@ from run import execute_question_reuse
 # add the directory containing mlp_test to the path
 import sys
 import os
-#sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-#print(f"Adding {os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))} to path")
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+print(f"Adding {os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))} to path")
 import torch.nn as nn
 from datetime import datetime
 import random
 from collections import Counter
-
-class MLP(nn.Module):
-    def __init__(self, input_dim=1536, hidden_dim=256, output_dim=16):
-        super(MLP, self).__init__()
-        print(f"Input dim: {input_dim}, Hidden dim: {hidden_dim}, Output dim: {output_dim}")
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)  # Removed second hidden layer, direct connection to output
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-        return x
+from mlp import MLP
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Adaptive Token Deprivation Experiment")
