@@ -125,8 +125,8 @@ def load_adaptive_results(adaptive_dir):
         correct_count = 0
         total_count = 0
         
-        print(f"\nProcessing budget directory: {budget_dir}")
-        print(f"Found {len(question_files)} question files")
+        #print(f"\nProcessing budget directory: {budget_dir}")
+        #print(f"Found {len(question_files)} question files")
         
         for qfile in question_files:
             with open(qfile, 'r') as f:
