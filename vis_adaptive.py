@@ -8,6 +8,9 @@ import argparse
 from datetime import datetime
 from collections import defaultdict
 
+# TODO: change accuracy to reflect accuracy across questions, not across trials, e.g. question is 
+# correct if the answer is the mode 
+
 def load_results(results_dir):
     """Load results from json files in the given directory"""
     # Dictionary to store results for each token budget
