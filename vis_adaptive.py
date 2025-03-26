@@ -1,4 +1,5 @@
 import os
+import glob
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -103,9 +104,14 @@ def load_adaptive_results(adaptive_dir):
     """Load results from adaptive runs with budget subdirectories."""
     token_budgets = []
     accuracies = []
+    total_questions = 0
+    total_files = 0
+    
+    print(f"\nLoading adaptive results from root directory: {adaptive_dir}")
     
     # Find all budget subdirectories
     budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
+    print(f"Found {len(budget_dirs)} budget subdirectories")
     
     for budget_dir in budget_dirs:
         # Extract token budget from directory name
@@ -114,8 +120,12 @@ def load_adaptive_results(adaptive_dir):
         
         # Load all question results from this budget directory
         question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
+        total_files += len(question_files)
         correct_count = 0
         total_count = 0
+        
+        print(f"\nProcessing budget directory: {budget_dir}")
+        print(f"Found {len(question_files)} question files")
         
         for qfile in question_files:
             with open(qfile, 'r') as f:
@@ -125,11 +135,17 @@ def load_adaptive_results(adaptive_dir):
                 if is_corrects:
                     correct_count += sum(is_corrects)
                     total_count += len(is_corrects)
+                    total_questions += 1
         
         if total_count > 0:
             accuracies.append(correct_count / total_count * 100)
         else:
             accuracies.append(0)
+    
+    print(f"\nSummary:")
+    print(f"Total question records processed: {total_questions}")
+    print(f"Total files loaded: {total_files}")
+    print(f"Average questions per budget: {total_questions/len(budget_dirs) if budget_dirs else 0:.2f}")
     
     return token_budgets, accuracies
 
