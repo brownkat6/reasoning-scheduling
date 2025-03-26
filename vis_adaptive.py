@@ -111,14 +111,14 @@ def load_adaptive_results(adaptive_dir):
     print(f"\nLoading adaptive results from root directory: {adaptive_dir}")
     
     # Find all budget subdirectories
-    budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
+    budget_dirs = sorted(glob(os.path.join(adaptive_dir, "budget_*")))
     print(f"Found {len(budget_dirs)} budget subdirectories")
     
     for budget_dir in budget_dirs:
         token_budget = int(budget_dir.split("_")[-1])
         token_budgets.append(token_budget)
         
-        question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
+        question_files = glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
         correct_count = 0
         total_count = 0
         num_questions = 0  # Track number of questions for this budget
@@ -148,7 +148,7 @@ def load_results(results_dir):
     
     # Group files by token budget
     budget_files = defaultdict(list)
-    for qfile in glob.glob(os.path.join(results_dir, "question_*_tokens_*.json")):
+    for qfile in glob(os.path.join(results_dir, "question_*_tokens_*.json")):
         with open(qfile, 'r') as f:
             data = json.load(f)
             budget = data.get('max_tokens')
