@@ -247,6 +247,7 @@ def main():
         # Convert string representation of lists to actual lists
         oracle_data['early_stop_correct_proportions'] = oracle_data['early_stop_correct_proportions'].apply(ast.literal_eval)
         predictions = np.array(oracle_data['early_stop_correct_proportions'].tolist())
+        predictions = predictions[args.start:args.end]
         
         print(f"Loaded oracle data from {oracle_file}")
     else:
@@ -294,13 +295,10 @@ def main():
         # Calculate expected reward under optimized allocation
         optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
         print(f"Expected reward under allocation: {optimized_reward}")
-        print(f"Allocation: {max_tokens}")
+        # print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
-        # TODO: don't truncate to first 100 questions
-        prompts = prompts[:20]
-        targets = targets[:20]
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
             

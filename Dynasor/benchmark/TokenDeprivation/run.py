@@ -332,8 +332,8 @@ def execute_question_reuse(
         if predicted_score is not None:
             actual_proportion = sum(is_corrects) / len(is_corrects)
             print(f"Question {problem_id} - Token budget {max_tokens[i]}:")
-            print(f"  Predicted proportion correct: {predicted_score:.3f}")
-            print(f"  Actual proportion correct:    {actual_proportion:.3f}")
+            print(f"  Predicted proportion correct: {predicted_score:.2f}")
+            print(f"  Actual proportion correct:    {actual_proportion:.2f}")
 
         round_results["is_corrects"] = is_corrects
         round_results["is_corrects_original"] = is_corrects_original
