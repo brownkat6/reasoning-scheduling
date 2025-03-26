@@ -148,6 +148,8 @@ def load_adaptive_results(adaptive_dir):
     print(f"Total files loaded: {total_files}")
     print(f"Average questions per budget: {total_questions/len(budget_dirs) if budget_dirs else 0:.2f}")
     
+    # before returning, sort token_budgets and accuracies in ascending order of token_budgets
+    token_budgets, accuracies = zip(*sorted(zip(token_budgets, accuracies)))
     return token_budgets, accuracies
 
 def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
