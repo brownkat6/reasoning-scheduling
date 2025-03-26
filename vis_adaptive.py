@@ -112,14 +112,14 @@ def load_adaptive_results(adaptive_dir):
     question_counts = []
     predictions_vs_actuals = {}  # New dict to store comparisons
     
-    budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
+    budget_dirs = sorted(glob(os.path.join(adaptive_dir, "budget_*")))
     
     for budget_dir in budget_dirs:
         token_budget = int(budget_dir.split("_")[-1])
         token_budgets.append(token_budget)
         predictions_vs_actuals[token_budget] = {}  # Dict for each budget level
         
-        question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
+        question_files = glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
         correct_count = 0
         total_count = 0
         num_questions = 0
