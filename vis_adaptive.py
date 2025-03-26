@@ -199,13 +199,25 @@ def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
             data = predictions_vs_actuals[budget][qid]
             pred = data['predicted']
             act = data['actual']
-            diff = act - pred if pred is not None else float('nan')
-            total_abs_diff += abs(diff) if pred is not None else 0
+            
+            # Handle None predictions
+            if pred is None:
+                print(f"{budget:11d} | {qid:10d} | {'N/A':>8s} | {act:6.3f} | {data['num_trials']:6d} | {'N/A':>9s}")
+                continue
+                
+            diff = act - pred
+            total_abs_diff += abs(diff)
             
             print(f"{budget:11d} | {qid:10d} | {pred:8.3f} | {act:6.3f} | {data['num_trials']:6d} | {diff:+9.3f}")
         
-        avg_abs_diff = total_abs_diff / num_questions if num_questions > 0 else 0
-        print(f"Average absolute difference for budget {budget}: {avg_abs_diff:.3f}")
+        # Only calculate average for questions with predictions
+        valid_predictions = sum(1 for qid in predictions_vs_actuals[budget] 
+                              if predictions_vs_actuals[budget][qid]['predicted'] is not None)
+        if valid_predictions > 0:
+            avg_abs_diff = total_abs_diff / valid_predictions
+            print(f"Average absolute difference for budget {budget}: {avg_abs_diff:.3f}")
+        else:
+            print(f"No valid predictions for budget {budget}")
 
 def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     # Load adaptive results
