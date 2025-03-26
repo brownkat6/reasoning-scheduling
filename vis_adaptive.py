@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from glob import glob
 import argparse
+from datetime import datetime
 
 def load_results(results_dir):
     """Load results from json files in the given directory"""
@@ -152,23 +153,60 @@ def load_adaptive_results(adaptive_dir):
 def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     # Load adaptive results with new directory structure
     adaptive_tokens, adaptive_accuracies = load_adaptive_results(adaptive_dir)
+    print("\nAdaptive Results:")
+    print(f"Token budgets: {adaptive_tokens}")
+    print(f"Accuracies: {[f'{acc:.2f}%' for acc in adaptive_accuracies]}")
     
     # Load non-adaptive results (unchanged)
     nonadaptive_tokens, nonadaptive_accuracies = load_results(nonadaptive_dir)
+    print("\nNon-adaptive Results:")
+    print(f"Token budgets: {nonadaptive_tokens}")
+    print(f"Accuracies: {[f'{acc:.2f}%' for acc in nonadaptive_accuracies]}")
     
     plt.figure(figsize=(10, 6))
-    plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', label='Adaptive')
-    plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', label='Non-adaptive')
+    plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', marker='o', label='Adaptive')
+    plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
         oracle_tokens, oracle_accuracies = load_adaptive_results(oracle_dir)
-        plt.plot(oracle_tokens, oracle_accuracies, 'g-', label='Oracle')
+        plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
+        print("\nOracle Results:")
+        print(f"Token budgets: {oracle_tokens}")
+        print(f"Accuracies: {[f'{acc:.2f}%' for acc in oracle_accuracies]}")
     
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
     plt.title('Accuracy vs Token Budget')
     plt.legend()
     plt.grid(True)
+    
+    # Create figures directory if it doesn't exist
+    os.makedirs('figures', exist_ok=True)
+    
+    # Save plot with timestamp
+    # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    plot_path = f'figures/accuracy_comparison.png'
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    print(f"\nPlot saved to: {plot_path}")
+    
+    # Print summary statistics
+    print("\nSummary Statistics:")
+    print("Adaptive:")
+    print(f"  Max accuracy: {max(adaptive_accuracies):.2f}%")
+    print(f"  Min accuracy: {min(adaptive_accuracies):.2f}%")
+    print(f"  Mean accuracy: {sum(adaptive_accuracies)/len(adaptive_accuracies):.2f}%")
+    
+    print("\nNon-adaptive:")
+    print(f"  Max accuracy: {max(nonadaptive_accuracies):.2f}%")
+    print(f"  Min accuracy: {min(nonadaptive_accuracies):.2f}%")
+    print(f"  Mean accuracy: {sum(nonadaptive_accuracies)/len(nonadaptive_accuracies):.2f}%")
+    
+    if oracle_dir:
+        print("\nOracle:")
+        print(f"  Max accuracy: {max(oracle_accuracies):.2f}%")
+        print(f"  Min accuracy: {min(oracle_accuracies):.2f}%")
+        print(f"  Mean accuracy: {sum(oracle_accuracies)/len(oracle_accuracies):.2f}%")
+    
     plt.show()
 
 def main():
