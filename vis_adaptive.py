@@ -249,10 +249,15 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
         print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
     plt.figure(figsize=(10, 6))
+    # sort adaptive_tokens and adaptive_accuracies in ascending order of adaptive_tokens
+    adaptive_tokens, adaptive_accuracies = zip(*sorted(zip(adaptive_tokens, adaptive_accuracies)))
+    nonadaptive_tokens, nonadaptive_accuracies = zip(*sorted(zip(nonadaptive_tokens, nonadaptive_accuracies)))
+    
     plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', marker='o', label='Adaptive')
     plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
+        oracle_tokens, oracle_accuracies = zip(*sorted(zip(oracle_tokens, oracle_accuracies)))
         plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
     
     plt.xlabel('Token Budget')
