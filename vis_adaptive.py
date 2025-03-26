@@ -202,7 +202,7 @@ def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
             
             # Handle None predictions
             if pred is None:
-                print(f"{budget:11d} | {qid:10d} | {'N/A':>8s} | {act:6.3f} | {data['num_trials']:6d} | {'N/A':>9s}")
+                # print(f"{budget:11d} | {qid:10d} | {'N/A':>8s} | {act:6.3f} | {data['num_trials']:6d} | {'N/A':>9s}")
                 continue
                 
             diff = act - pred
