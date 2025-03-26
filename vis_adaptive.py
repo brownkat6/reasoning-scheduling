@@ -191,7 +191,7 @@ def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
     print("-" * 75)
     
     for budget in sorted(predictions_vs_actuals.keys()):
-        print(f"\nBudget: {budget} tokens")
+        # print(f"\nBudget: {budget} tokens")
         total_abs_diff = 0
         num_questions = len(predictions_vs_actuals[budget])
         
@@ -228,6 +228,12 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     if oracle_dir:
         oracle_tokens, oracle_accuracies, oracle_counts, oracle_predictions = load_adaptive_results(oracle_dir)
         print_prediction_analysis(oracle_predictions, "Oracle")
+        
+        print("\nOracle Results:")
+        print("Token Budget | Accuracy | Questions")
+        print("-" * 40)
+        for t, a, c in zip(oracle_tokens, oracle_accuracies, oracle_counts):
+            print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
     print("\nAdaptive Results:")
     print("Token Budget | Accuracy | Questions")
