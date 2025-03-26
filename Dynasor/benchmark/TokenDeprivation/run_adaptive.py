@@ -183,7 +183,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
         if allocations[i % (num_queries)] + W <= max_budget_per_query:
             allocations[i % (num_queries)] += W
             remaining_budget -= W
-            i+=1
+        i+=1
     print(remaining_budget,"remaining budget after distributing additional tokens")
     print(f"Allocation counts: {Counter(allocations)}")
     
@@ -192,8 +192,8 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     # print(predictions,"predictions")
     expected_reward_uniform = np.mean([predictions[i][token_budget//W - 1] for i in range(num_queries)])
     expected_reward_allocation = np.mean([predictions[i][allocations[i]//W - 1] for i in range(num_queries)])
-    print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
-    print(f"Expected reward under allocation: {expected_reward_allocation}")
+    print(f"Expected reward under uniform allocation: {np.round(expected_reward_uniform,2)}")
+    print(f"Expected reward under allocation: {np.round(expected_reward_allocation,2)}")
     print(f"Mean token allocation: {np.mean(allocations)}, target token budget: {token_budget}")
     
     return allocations.tolist()
