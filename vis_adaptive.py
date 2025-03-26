@@ -110,7 +110,7 @@ def load_adaptive_results(adaptive_dir):
     print(f"\nLoading adaptive results from root directory: {adaptive_dir}")
     
     # Find all budget subdirectories
-    budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
+    budget_dirs = sorted(glob(os.path.join(adaptive_dir, "budget_*")))
     print(f"Found {len(budget_dirs)} budget subdirectories")
     
     for budget_dir in budget_dirs:
@@ -119,7 +119,7 @@ def load_adaptive_results(adaptive_dir):
         token_budgets.append(token_budget)
         
         # Load all question results from this budget directory
-        question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
+        question_files = glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
         total_files += len(question_files)
         correct_count = 0
         total_count = 0
