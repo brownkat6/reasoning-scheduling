@@ -286,11 +286,6 @@ def main():
         # Optimize token allocation for this budget
         max_tokens = optimize_token_allocation(predictions, token_budget)
         
-        # Calculate expected reward under optimized allocation
-        optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
-        print(f"Expected reward under allocation: {optimized_reward}")
-        print(f"Allocation: {max_tokens}")
-        
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
         # TODO: don't truncate to first 100 questions
@@ -298,6 +293,14 @@ def main():
         targets = targets[:20]
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
+            
+            # Get prediction for this question at this token count
+            window_index = max_tokens[i]//16 - 1
+            if args.use_oracle:
+                predicted_score = predictions[i][window_index] if window_index < len(predictions[i]) else 0
+            else:
+                predicted_score = predictions[i][window_index] if window_index < len(predictions[i]) else 0
+                
             execute_question_reuse(
                 model,
                 prompt,
@@ -307,10 +310,11 @@ def main():
                 probe_tokens=args.probe_tokens,
                 num_trials=args.num_trials,
                 problem_id=i+args.start,
-                output_dir=budget_dir,  # Save in budget-specific subdirectory
+                output_dir=budget_dir,
                 top_p=args.top_p,
                 temperature=args.temperature,
                 tokenizer=tokenizer,
+                predicted_score=predicted_score
             )
 
     print(f"Saved results to {output_dir}")

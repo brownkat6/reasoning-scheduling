@@ -109,39 +109,46 @@ def load_adaptive_results(adaptive_dir):
     """Load results from adaptive runs with budget subdirectories."""
     token_budgets = []
     accuracies = []
-    question_counts = []  # New list to track question counts
+    question_counts = []
+    predictions_vs_actuals = {}  # New dict to store comparisons
     
-    print(f"\nLoading adaptive results from root directory: {adaptive_dir}")
-    
-    # Find all budget subdirectories
-    budget_dirs = sorted(glob(os.path.join(adaptive_dir, "budget_*")))
-    print(f"Found {len(budget_dirs)} budget subdirectories")
+    budget_dirs = sorted(glob.glob(os.path.join(adaptive_dir, "budget_*")))
     
     for budget_dir in budget_dirs:
         token_budget = int(budget_dir.split("_")[-1])
         token_budgets.append(token_budget)
+        predictions_vs_actuals[token_budget] = {}  # Dict for each budget level
         
-        question_files = glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
+        question_files = glob.glob(os.path.join(budget_dir, "question_*_tokens_*.json"))
         correct_count = 0
         total_count = 0
-        num_questions = 0  # Track number of questions for this budget
+        num_questions = 0
         
         for qfile in question_files:
             with open(qfile, 'r') as f:
                 data = json.load(f)
+                problem_id = data.get('problem_id')
                 is_corrects = data.get('is_corrects', [])
+                predicted_score = data.get('predicted_score', None)
+                
                 if is_corrects:
+                    actual_proportion = sum(is_corrects) / len(is_corrects)
+                    predictions_vs_actuals[token_budget][problem_id] = {
+                        'predicted': predicted_score,
+                        'actual': actual_proportion,
+                        'num_trials': len(is_corrects)
+                    }
                     correct_count += sum(is_corrects)
                     total_count += len(is_corrects)
                     num_questions += 1
         
-        question_counts.append(num_questions)  # Store count for this budget
+        question_counts.append(num_questions)
         if total_count > 0:
             accuracies.append(correct_count / total_count * 100)
         else:
             accuracies.append(0)
     
-    return token_budgets, accuracies, question_counts
+    return token_budgets, accuracies, question_counts, predictions_vs_actuals
 
 def load_results(results_dir):
     """Load results from non-adaptive runs."""
@@ -178,7 +185,38 @@ def load_results(results_dir):
     
     return token_budgets, accuracies, question_counts
 
+def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
+    print(f"\n{run_type} Run Analysis - Predicted vs Actual Proportions:")
+    print("Token Budget | Question ID | Predicted | Actual | Trials | Difference")
+    print("-" * 75)
+    
+    for budget in sorted(predictions_vs_actuals.keys()):
+        print(f"\nBudget: {budget} tokens")
+        total_abs_diff = 0
+        num_questions = len(predictions_vs_actuals[budget])
+        
+        for qid in sorted(predictions_vs_actuals[budget].keys()):
+            data = predictions_vs_actuals[budget][qid]
+            pred = data['predicted']
+            act = data['actual']
+            diff = act - pred if pred is not None else float('nan')
+            total_abs_diff += abs(diff) if pred is not None else 0
+            
+            print(f"{budget:11d} | {qid:10d} | {pred:8.3f} | {act:6.3f} | {data['num_trials']:6d} | {diff:+9.3f}")
+        
+        avg_abs_diff = total_abs_diff / num_questions if num_questions > 0 else 0
+        print(f"Average absolute difference for budget {budget}: {avg_abs_diff:.3f}")
+
 def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
+    # Load adaptive results
+    adaptive_tokens, adaptive_accuracies, adaptive_counts, adaptive_predictions = load_adaptive_results(adaptive_dir)
+    print_prediction_analysis(adaptive_predictions, "Adaptive (Non-Oracle)")
+    
+    # Load oracle results if provided
+    if oracle_dir:
+        oracle_tokens, oracle_accuracies, oracle_counts, oracle_predictions = load_adaptive_results(oracle_dir)
+        print_prediction_analysis(oracle_predictions, "Oracle")
+    
     # Load results with question counts
     adaptive_tokens, adaptive_accuracies, adaptive_counts = load_adaptive_results(adaptive_dir)
     print("\nAdaptive Results:")
@@ -199,13 +237,7 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
-        oracle_tokens, oracle_accuracies, oracle_counts = load_adaptive_results(oracle_dir)
         plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
-        print("\nOracle Results:")
-        print("Token Budget | Accuracy | Questions")
-        print("-" * 40)
-        for t, a, c in zip(oracle_tokens, oracle_accuracies, oracle_counts):
-            print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
