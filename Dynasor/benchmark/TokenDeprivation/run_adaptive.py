@@ -189,6 +189,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
     print(f"Expected reward under allocation: {expected_reward_allocation}")
     print(f"Allocation counts: {Counter(allocations)}")
+    print(f"Mean token allocation: {np.mean(allocations)}, target token budget: {token_budget}")
     
     return allocations.tolist()
 
