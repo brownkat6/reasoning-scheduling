@@ -299,6 +299,8 @@ def main():
         
         # Execute questions with optimized token allocations
         model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
+        predicted_scores = []
+        actual_scores = []
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
             
@@ -308,7 +310,7 @@ def main():
             # Get appropriate prediction based on mode
             predicted_score = predictions[i][window_index] if window_index < len(predictions[i]) else 0.0
             
-            execute_question_reuse(
+            proportion_correct =execute_question_reuse(
                 model,
                 prompt,
                 target,
@@ -323,6 +325,16 @@ def main():
                 tokenizer=tokenizer,
                 predicted_score=predicted_score  # Pass prediction to execute_question_reuse
             )
+            predicted_scores.append(predicted_score)
+            actual_scores.append(proportion_correct)
+
+        # print predicted and actual scores across all questions in the given token budget
+        print(f"Token budget: {token_budget}")
+        print(f"Predicted scores: {predicted_scores}")
+        print(f"Actual scores: {actual_scores}")
+        # print mean predicted and actual scores
+        print(f"Mean predicted score: {np.mean(predicted_scores)}")
+        print(f"Mean actual score: {np.mean(actual_scores)}\n")
 
     print(f"Saved results to {output_dir}")
 

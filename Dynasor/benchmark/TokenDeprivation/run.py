@@ -329,8 +329,8 @@ def execute_question_reuse(
             )
 
         # Calculate and print actual proportion
+        actual_proportion = sum(is_corrects) / len(is_corrects)
         if predicted_score is not None:
-            actual_proportion = sum(is_corrects) / len(is_corrects)
             print(f"Question {problem_id} - Token budget {max_tokens[i]}:")
             print(f"  Predicted proportion correct: {predicted_score:.2f}")
             print(f"  Actual proportion correct:    {actual_proportion:.2f}")
@@ -344,7 +344,7 @@ def execute_question_reuse(
                 f"{output_dir}/question_{problem_id}_tokens_{max_tokens[i]}.json"
             )
             save_json(round_results, round_filename)
-
+    return actual_proportion
 
 def main():
     args = parse_args()
