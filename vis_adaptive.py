@@ -229,8 +229,6 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
         oracle_tokens, oracle_accuracies, oracle_counts, oracle_predictions = load_adaptive_results(oracle_dir)
         print_prediction_analysis(oracle_predictions, "Oracle")
     
-    # Load results with question counts
-    adaptive_tokens, adaptive_accuracies, adaptive_counts = load_adaptive_results(adaptive_dir)
     print("\nAdaptive Results:")
     print("Token Budget | Accuracy | Questions")
     print("-" * 40)
