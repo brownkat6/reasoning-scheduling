@@ -33,7 +33,7 @@ def load_results(results_dir):
     # Calculate accuracies
     x_tokens = sorted(token_results.keys())
     y_accuracies = [
-        np.mean(token_results[tokens]['correct'])
+        np.mean(token_results[tokens]['correct']) * 100
         for tokens in x_tokens
     ]
     
