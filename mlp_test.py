@@ -326,7 +326,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
     #batch_texts = [q['question'] + " <think>" for q in batch_questions if q['id'] not in completed_question_ids]
-    batch_texts = [format_deepseek_prompt(q['question']) for q in batch_questions if q['id'] not in completed_question_ids]
+    question_key = 'question' if 'question' in batch_questions[0] else 'problem'
+    batch_texts = [format_deepseek_prompt(q[question_key]) for q in batch_questions if q['id'] not in completed_question_ids]
     if not batch_texts:  # Skip if all questions are completed
         print("All questions in batch already completed")
         return
@@ -355,7 +356,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
             print(f"Skipping completed question {qid}")
             continue
             
-        q_text = format_deepseek_prompt(question['question']) #question['question']+" <think>"
+        q_text = format_deepseek_prompt(question[question_key]) #question['question']+" <think>"
         q_answer = question['answer']
         print(f"Processing question {qid} from {split} split...")
         
