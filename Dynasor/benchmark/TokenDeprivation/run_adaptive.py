@@ -135,6 +135,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     # Convert predictions to numpy for easier manipulation
     pred_array = np.array(predictions)
+    max_budget_per_query = max_positions * W
     
     # Initialize with minimum tokens
     allocations = np.ones(num_queries, dtype=int) * W
@@ -176,10 +177,15 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     i=0
     while remaining_budget >= W:
-        allocations[i % (num_queries)] += W
-        remaining_budget -= W
-        i+=1
+        # if all allocations are >= max_budget_per_query
+        if all([a >= max_budget_per_query for a in allocations]):
+            break
+        if allocations[i % (num_queries)] + W <= max_budget_per_query:
+            allocations[i % (num_queries)] += W
+            remaining_budget -= W
+            i+=1
     print(remaining_budget,"remaining budget after distributing additional tokens")
+    print(f"Allocation counts: {Counter(allocations)}")
     
     # print what the expected reward under prediction are under allocation, and compare it to the expected reward if all queries
     # were allocated token_budget uniformly
@@ -188,7 +194,6 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     expected_reward_allocation = np.mean([predictions[i][allocations[i]//W - 1] for i in range(num_queries)])
     print(f"Expected reward under uniform allocation: {expected_reward_uniform}")
     print(f"Expected reward under allocation: {expected_reward_allocation}")
-    print(f"Allocation counts: {Counter(allocations)}")
     print(f"Mean token allocation: {np.mean(allocations)}, target token budget: {token_budget}")
     
     return allocations.tolist()
