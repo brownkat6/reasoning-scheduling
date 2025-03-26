@@ -287,14 +287,14 @@ def main():
         
         # Calculate expected reward under uniform allocation
         uniform_reward = np.mean([predictions[i][token_budget//16 - 1] for i in range(len(predictions))])
-        print(f"Expected reward under uniform allocation: {uniform_reward}")
+        print(f"Expected reward under uniform allocation: {np.round(uniform_reward,3)}")
         
         # Optimize token allocation for this budget
         max_tokens = optimize_token_allocation(predictions, token_budget)
         
         # Calculate expected reward under optimized allocation
         optimized_reward = np.mean([predictions[i][max_tokens[i]//16 - 1] for i in range(len(predictions))])
-        print(f"Expected reward under allocation: {optimized_reward}")
+        print(f"Expected reward under allocation: {np.round(optimized_reward,3)}")
         # print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations

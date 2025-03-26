@@ -16,8 +16,8 @@ mkdir -p data/numina_results
 
 # If it's the last array job (10), it's the test set
 if [ $SLURM_ARRAY_TASK_ID -eq 10 ]; then
-    python -u mlp_test.py --generate --batch_idx 0 --split test --dataset numina --csv_file data/numina_results/numina_results_test_0.csv --S 1024
+    /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_test.py --generate --batch_idx 0 --split test --dataset numina --csv_file data/numina_results/numina_results_test_0.csv --S 1024
 else
     # Otherwise it's a train batch (0-9)
-    python -u mlp_test.py --generate --batch_idx $SLURM_ARRAY_TASK_ID --split train --dataset numina --csv_file data/numina_results/numina_results_train_${SLURM_ARRAY_TASK_ID}.csv --S 1024
+    /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_test.py --generate --batch_idx $SLURM_ARRAY_TASK_ID --split train --dataset numina --csv_file data/numina_results/numina_results_train_${SLURM_ARRAY_TASK_ID}.csv --S 1024
 fi 

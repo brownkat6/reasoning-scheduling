@@ -19,7 +19,7 @@ mkdir -p logs
 mkdir -p data/math500_results
 
 # Run the Python script
-python -u mlp_test.py \
+/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_test.py \
     --generate \
     --split test \
     --batch_idx $SLURM_ARRAY_TASK_ID \
