@@ -134,17 +134,27 @@ def load_adaptive_results(adaptive_dir):
                 problem_id = data.get('problem_id')
                 is_corrects = data.get('is_corrects', [])
                 predicted_score = data.get('predicted_score', None)
+                tokens_used_per_problem = int(qfile.split("_")[-1].split(".")[0])
                 
                 if is_corrects:
                     actual_proportion = sum(is_corrects) / len(is_corrects)
                     predictions_vs_actuals[token_budget][problem_id] = {
                         'predicted': predicted_score,
                         'actual': actual_proportion,
-                        'num_trials': len(is_corrects)
+                        'num_trials': len(is_corrects),
+                        'tokens_used': tokens_used_per_problem,
                     }
                     correct_count += sum(is_corrects)
                     total_count += len(is_corrects)
                     num_questions += 1
+            tokens_used = [predictions_vs_actuals[token_budget][qid]['tokens_used'] for qid in predictions_vs_actuals[token_budget]]
+            predictions = [predictions_vs_actuals[token_budget][qid]['predicted'] for qid in predictions_vs_actuals[token_budget]]
+            actuals = [predictions_vs_actuals[token_budget][qid]['actual'] for qid in predictions_vs_actuals[token_budget]]
+            print(f"Token budget: {token_budget}, num questions: {num_questions}")
+            print(f"Tokens used: {tokens_used}")
+            print(f"Predictions: {predictions}")
+            print(f"Actuals: {actuals}")
+            print("\n")
         
         question_counts.append(num_questions)
         if total_count > 0:
