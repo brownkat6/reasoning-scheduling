@@ -233,14 +233,65 @@ def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
         else:
             print(f"No valid predictions for budget {budget}")
 
+def create_prediction_scatter(adaptive_predictions, oracle_predictions=None):
+    """Create scatter plot of predicted vs actual proportions."""
+    plt.figure(figsize=(10, 6))
+    
+    # Collect all predictions and actuals for adaptive
+    adaptive_pred = []
+    adaptive_act = []
+    for budget in adaptive_predictions:
+        for qid in adaptive_predictions[budget]:
+            data = adaptive_predictions[budget][qid]
+            if data['predicted'] is not None:
+                adaptive_pred.append(data['predicted'])
+                adaptive_act.append(data['actual'])
+    
+    # Plot adaptive data
+    plt.scatter(adaptive_pred, adaptive_act, alpha=0.5, label='Adaptive')
+    adaptive_corr = np.corrcoef(adaptive_pred, adaptive_act)[0,1]
+    print(f"\nAdaptive Correlation: {adaptive_corr:.3f}")
+    
+    # Plot oracle data if available
+    if oracle_predictions:
+        oracle_pred = []
+        oracle_act = []
+        for budget in oracle_predictions:
+            for qid in oracle_predictions[budget]:
+                data = oracle_predictions[budget][qid]
+                if data['predicted'] is not None:
+                    oracle_pred.append(data['predicted'])
+                    oracle_act.append(data['actual'])
+        
+        plt.scatter(oracle_pred, oracle_act, alpha=0.5, label='Oracle')
+        oracle_corr = np.corrcoef(oracle_pred, oracle_act)[0,1]
+        print(f"Oracle Correlation: {oracle_corr:.3f}")
+    
+    plt.plot([0, 1], [0, 1], 'k--', alpha=0.5)  # Add y=x line
+    plt.xlabel('Predicted Proportion Correct')
+    plt.ylabel('Actual Proportion Correct')
+    plt.title('Predicted vs Actual Performance')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Save plot
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    plt.savefig(f'figures/prediction_scatter.png', dpi=300, bbox_inches='tight')
+
 def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     # Load adaptive results
     adaptive_tokens, adaptive_accuracies, adaptive_counts, adaptive_predictions = load_adaptive_results(adaptive_dir)
     print_prediction_analysis(adaptive_predictions, "Adaptive (Non-Oracle)")
     
-    # Load oracle results if provided
+    # Create prediction scatter plot
     if oracle_dir:
         oracle_tokens, oracle_accuracies, oracle_counts, oracle_predictions = load_adaptive_results(oracle_dir)
+        create_prediction_scatter(adaptive_predictions, oracle_predictions)
+    else:
+        create_prediction_scatter(adaptive_predictions)
+    
+    # Load oracle results if provided
+    if oracle_dir:
         print_prediction_analysis(oracle_predictions, "Oracle")
         
         print("\nOracle Results:")
