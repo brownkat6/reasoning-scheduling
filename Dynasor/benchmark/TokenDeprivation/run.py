@@ -274,7 +274,7 @@ def execute_question_reuse(
             "finish_reasons": [completion[1] for completion in completions],
             "is_finished": is_finished,
             "target": target,
-            "predicted_score": predicted_score,
+            "predicted_score": float(predicted_score) if predicted_score is not None else None
         }
 
         # Generate and save probed responses
