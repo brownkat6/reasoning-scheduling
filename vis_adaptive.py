@@ -323,7 +323,10 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     
     if oracle_dir:
         oracle_tokens, oracle_accuracies = zip(*sorted(zip(oracle_tokens, oracle_accuracies)))
-        plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
+        # plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
+        # TODO: plot ground truth recorded prediction proportions rather than 10 new sampled reasoning traces proportion
+        # sidesteps any data issues
+        plt.plot(oracle_tokens, oracle_predictions, 'g-', marker='^', label='Oracle')
     
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
