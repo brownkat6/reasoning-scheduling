@@ -150,11 +150,11 @@ def load_adaptive_results(adaptive_dir):
             tokens_used = [predictions_vs_actuals[token_budget][qid]['tokens_used'] for qid in predictions_vs_actuals[token_budget]]
             predictions = [predictions_vs_actuals[token_budget][qid]['predicted'] for qid in predictions_vs_actuals[token_budget]]
             actuals = [predictions_vs_actuals[token_budget][qid]['actual'] for qid in predictions_vs_actuals[token_budget]]
-            print(f"Token budget: {token_budget}, num questions: {num_questions}")
-            print(f"Tokens used: {tokens_used}")
-            print(f"Predictions: {predictions}")
-            print(f"Actuals: {actuals}")
-            print("\n")
+            #print(f"Token budget: {token_budget}, num questions: {num_questions}")
+            #print(f"Tokens used: {tokens_used}")
+            #print(f"Predictions: {predictions}")
+            #print(f"Actuals: {actuals}")
+            #print("\n")
         
         question_counts.append(num_questions)
         if total_count > 0:
