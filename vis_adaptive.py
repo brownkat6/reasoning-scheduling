@@ -326,8 +326,9 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
         # plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
         # NOTE: plot ground truth recorded prediction proportions rather than 10 new sampled reasoning traces proportion
         # sidesteps any data issues
-        predicted_accuracies = [oracle_predictions[token_budget][qid]['predicted'] for token_budget in oracle_tokens for qid in oracle_predictions[token_budget]]
-        predicted_accuracies = [np.mean(preds) for preds in predicted_accuracies]
+        predicted_accuracies = []
+        for token_budget in oracle_tokens:
+            predicted_accuracies.append(np.mean([oracle_predictions[token_budget][qid]['predicted'] for qid in oracle_predictions[token_budget]]))
         plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle')
     
     plt.xlabel('Token Budget')
