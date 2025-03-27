@@ -328,7 +328,8 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
         # sidesteps any data issues
         predicted_accuracies = []
         for token_budget in oracle_tokens:
-            predicted_accuracies.append(np.mean([oracle_predictions[token_budget][qid]['predicted'] for qid in oracle_predictions[token_budget]]))
+            predicted_accuracies.append(np.mean([float(oracle_predictions[token_budget][qid]['predicted']) for qid in oracle_predictions[token_budget]]))
+        print("Oracle predicted accuracies: ", predicted_accuracies)
         plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle')
     
     plt.xlabel('Token Budget')
