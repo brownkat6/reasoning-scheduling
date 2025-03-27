@@ -26,7 +26,6 @@ set -x
     --max-tokens 256 \
     --start 0 \
     --end 20 \
-    --output "${OUTPUT_DIR}/gsm8k_step32_max16384_trials10" \
     --probe-tokens 32 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"

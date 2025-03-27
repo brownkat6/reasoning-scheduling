@@ -34,6 +34,8 @@ set -x
     --temperature 0.6 \
     --top-p 0.95 \
     --probe-tokens 32 \
+    --start 0 \
+    --end 20 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"
 set +x

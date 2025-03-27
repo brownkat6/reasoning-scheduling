@@ -437,7 +437,9 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                         # Only move to CPU when needed for string processing
                         for j, output_ids in enumerate(batch_outputs):
                             # decode only the text not included in the input prompt into forced_text
-                            forced_text = tokenizer.decode(output_ids.cpu()[len(inputs_trace['input_ids'][j]):], skip_special_tokens=True)
+                            stem = tokenizer([batch_prompts[j]], return_tensors="pt").to('cuda')
+                            forced_text = tokenizer.decode(output_ids.cpu()[len(stem.input_ids[0]):], skip_special_tokens=True)
+                            # forced_text = tokenizer.decode(output_ids.cpu()[len(inputs_trace['input_ids'][j]):], skip_special_tokens=True)
                             early_generated_answers.append(forced_text)
                             extracted = extract_numerical_answer(forced_text)
                             early_extracted_answers.append(extracted)
