@@ -318,13 +318,18 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     adaptive_tokens, adaptive_accuracies = zip(*sorted(zip(adaptive_tokens, adaptive_accuracies)))
     nonadaptive_tokens, nonadaptive_accuracies = zip(*sorted(zip(nonadaptive_tokens, nonadaptive_accuracies)))
     
+    predicted_accuracies_adaptive = []
+    for token_budget in adaptive_tokens:
+        predicted_accuracies_adaptive.append(100.0*np.mean([float(adaptive_predictions[token_budget][qid]['predicted']) for qid in adaptive_predictions[token_budget]]))
+    
     plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', marker='o', label='Adaptive')
+    plt.plot(adaptive_tokens, predicted_accuracies_adaptive, 'b-', marker='o', label='Adaptive Predicted')
     plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
         oracle_tokens, oracle_accuracies = zip(*sorted(zip(oracle_tokens, oracle_accuracies)))
         # plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
-        # NOTE: plot ground truth recorded prediction proportions rather than 10 new sampled reasoning traces proportion
+        # NOTE: for "Oracle" line, plot ground truth recorded prediction proportions rather than 10 new sampled reasoning traces proportion
         # sidesteps any data issues
         predicted_accuracies = []
         for token_budget in oracle_tokens:
