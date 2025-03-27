@@ -323,7 +323,7 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
         predicted_accuracies_adaptive.append(100.0*np.mean([float(adaptive_predictions[token_budget][qid]['predicted']) for qid in adaptive_predictions[token_budget]]))
     
     plt.plot(adaptive_tokens, adaptive_accuracies, 'b-', marker='o', label='Adaptive')
-    plt.plot(adaptive_tokens, predicted_accuracies_adaptive, 'b-', marker='o', label='Adaptive Predicted')
+    # plt.plot(adaptive_tokens, predicted_accuracies_adaptive, 'p-', marker='o', label='Adaptive Predicted')
     plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
