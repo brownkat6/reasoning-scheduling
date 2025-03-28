@@ -345,7 +345,9 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
             predicted_accuracies.append(100.0*np.mean([float(oracle_predictions[token_budget][qid]['predicted']) for qid in oracle_predictions[token_budget]]))
         print("Oracle predicted accuracies: ", predicted_accuracies)
         plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle')
-    
+        # plots actual accuracies from 10 resampled reasoning traces
+        plt.plot(oracle_tokens, oracle_accuracies, 'p-', label='Adaptive (Oracle) Actual Resampled', marker='o')
+        
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
     plt.title('Accuracy vs Token Budget')
