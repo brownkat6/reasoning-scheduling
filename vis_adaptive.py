@@ -8,6 +8,15 @@ import argparse
 from datetime import datetime
 from collections import defaultdict
 
+'''
+/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u vis_adaptive.py     
+    --dataset gsm8k     
+    --model deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B     
+    --adaptive-dir Dynasor/benchmark/TokenDeprivation/results/adaptive_deepseek-ai-DeepSeek-R1-Distill-Qwen-1.5B_gsm8k_mlpgsm8k_train_20250327183843     
+    --nonadaptive-dir Dynasor/benchmark/TokenDeprivation/results/deepseek-ai-DeepSeek-R1-Distill-Qwen-1.5B_gsm8k_step32_max256_trials10_20250325152252     
+    --oracle-dir Dynasor/benchmark/TokenDeprivation/results/oracle_deepseek-ai-DeepSeek-R1-Distill-Qwen-1.5B_gsm8k_mlpgsm8k_train_20250327174756
+'''
+
 # TODO: change accuracy to reflect accuracy across questions, not across trials, e.g. question is 
 # correct if the answer is the mode 
 

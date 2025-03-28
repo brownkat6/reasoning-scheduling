@@ -25,7 +25,7 @@ set -x
     --step 32 \
     --max-tokens 256 \
     --start 0 \
-    --end 20 \
+    --end 100 \
     --probe-tokens 32 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"

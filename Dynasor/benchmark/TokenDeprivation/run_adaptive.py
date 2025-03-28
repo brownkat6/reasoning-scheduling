@@ -214,7 +214,7 @@ def main():
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         model_name = args.model.replace("/", "-")
         prefix = "oracle" if args.use_oracle else "adaptive"
-        output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}_{timestamp}"
+        output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}_{args.start}_{args.end}"
     os.makedirs(output_dir, exist_ok=True)
 
     # Process questions in range

@@ -361,7 +361,7 @@ def main():
         # Create output directory with model name, dataset, parameters and date
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         model_name = args.model.replace("/", "-")
-        output_dir = f"results/{model_name}_{args.dataset}_step{args.step}_max{args.max_tokens}_trials{args.num_trials}_{timestamp}"
+        output_dir = f"results/{model_name}_{args.dataset}_step{args.step}_max{args.max_tokens}_trials{args.num_trials}_{args.start}_{args.end}"
         os.makedirs(output_dir, exist_ok=True)
 
     # Replace load_model with load_model_and_tokenizer
