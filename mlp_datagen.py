@@ -61,9 +61,9 @@ def get_model_and_tokenizer():
     model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
-        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
-        from accelerate import dispatch_model
-        model = dispatch_model(model, device_map="balanced")
+        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers", device_map="cuda")
+        #from accelerate import dispatch_model
+        #model = dispatch_model(model, device_map="balanced")
         model.eval()
         #model.gradient_checkpointing_enable()
     except Exception as e:
