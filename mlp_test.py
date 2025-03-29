@@ -26,7 +26,7 @@ import torch.optim as optim
 from scipy.stats import pearsonr
 from datasets import load_dataset
 from Dynasor.dynasor import utils
-from Dynasor.benchmark.TokenDeprivation import execute_question_reuse
+from Dynasor.benchmark.TokenDeprivation.run import execute_question_reuse
 from Dynasor.benchmark.TokenDeprivation import run
 
 try:
