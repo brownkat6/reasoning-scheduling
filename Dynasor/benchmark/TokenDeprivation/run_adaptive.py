@@ -235,6 +235,7 @@ def main():
         oracle_data = pd.read_csv(oracle_file)
         print(oracle_data.shape)
         print(oracle_data.columns)
+        oracle_data["question_id"] = oracle_data["question_id"].apply(lambda x: int(x.replace("test_","").replace("train_","")))
         oracle_data = oracle_data.drop_duplicates(subset=['question_id']).sort_values(by='question_id')
         print(f"Question_ids: {oracle_data['question_id'].tolist()}")
         print(oracle_data.shape)
