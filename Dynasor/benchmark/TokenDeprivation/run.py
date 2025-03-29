@@ -1,6 +1,9 @@
 import argparse
 from tqdm import tqdm
-from utils import save_json, load_dataset, set_seed
+try:
+    from utils import save_json, load_dataset, set_seed
+except:
+    from Dynasor.benchmark.TokenDeprivation.utils import save_json, load_dataset, set_seed
 from dynasor.core.evaluator import (
     extract_answer,
     strip_string,
