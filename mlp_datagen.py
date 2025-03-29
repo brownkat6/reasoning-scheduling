@@ -235,7 +235,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
             max_tokens=token_budgets,
             probe=probe,
             probe_tokens=10,
-            num_trials=10,
+            num_trials=100,
             problem_id=problem_id,
             output_dir=None,
             top_p=0.95,
