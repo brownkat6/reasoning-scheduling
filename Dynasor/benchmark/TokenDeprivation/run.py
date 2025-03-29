@@ -197,6 +197,7 @@ def execute_question_reuse(
         if tokenizer is None:
             tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
     print(len(max_tokens),max_tokens,"max tokens to execute")
+    round_results_arr = []
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         # Track which trials are finished
         if i == 0:
@@ -338,6 +339,7 @@ def execute_question_reuse(
 
         round_results["is_corrects"] = is_corrects
         round_results["is_corrects_original"] = is_corrects_original
+        round_results_arr.append(round_results)
 
         # Save results for this round to a file
         if output_dir:
@@ -345,7 +347,7 @@ def execute_question_reuse(
                 f"{output_dir}/question_{problem_id}_tokens_{max_tokens[i]}.json"
             )
             save_json(round_results, round_filename)
-    return actual_proportion
+    return actual_proportion, round_results_arr
 
 def main():
     args = parse_args()

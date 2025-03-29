@@ -25,28 +25,11 @@ import torch.optim as optim
 
 from scipy.stats import pearsonr
 from datasets import load_dataset
-from Dynasor.dynasor import utils
-from Dynasor.benchmark.TokenDeprivation import execute_question_reuse
-from Dynasor.benchmark.TokenDeprivation import run
 
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM
 except ImportError:
     raise ImportError("Transformers library not found. Please install via pip install transformers")
-
-def load_dynasor_dataset(dataset_name):
-    """
-    Load a Dynasor dataset using the Dynasor utils.
-    """
-    assert dataset_name in ["amc23", "aime24", "GPQADiamond", "math500", "gsm8k"], f"Dataset {dataset_name} not supported"
-    data = utils.load_dataset(dataset_name)
-    test_data = []
-    for i, sample in enumerate(data):
-        question = sample["problem"]
-        answer_field = sample["answer"]
-        ground_truth = answer_field.strip()
-        test_data.append({"id": f"test_{i}", "problem": question, "answer": ground_truth})
-    return test_data
 
 def load_math500_dataset():
     """
@@ -275,117 +258,7 @@ def format_deepseek_prompt(user_message: str) -> str:
     """Format prompt with DeepSeek template"""
     return f"<｜begin▁of▁sentence｜><｜User｜>{user_message}<｜Assistant｜><think>\n"
 
-
 def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
-    assert model is not None, "Model must be provided"
-    completed_question_ids = set()
-    all_data = []
-    if os.path.exists(output_csv):
-        try:
-            print(f"Loading existing results from {output_csv}")
-            existing_df = pd.read_csv(output_csv)
-            # Count number of traces per question
-            trace_counts = existing_df.groupby('question_id').size()
-            # Get questions with all traces completed
-            completed_question_ids = set(trace_counts[trace_counts >= num_traces].index)
-            all_data = existing_df.to_dict('records')
-            print(f"Found {len(completed_question_ids)} completed questions")
-        except Exception as e:
-            print(f"Error loading existing results from {output_csv}: {e}")
-    
-    # Load the Qwen model and tokenizer
-    model, tokenizer = get_model_and_tokenizer()
-    # Move model to GPU once
-    model = model.to('cuda')
-
-    early_stopping_positions = list(range(W, S + 1, W))  # e.g., 16, 32, ... 4096
-
-    # Pre-compute hidden states for all questions in batch at once
-    print("Computing hidden states for all questions in batch...")
-    batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in batch_texts if q['id'] not in completed_question_ids]
-    if not batch_texts:  # Skip if all questions are completed
-        print("All questions in batch already completed")
-        return
-        
-    batch_inputs = tokenizer(batch_texts, return_tensors="pt", padding=True).to('cuda')
-    with torch.inference_mode():
-        batch_outputs = model(**batch_inputs, output_hidden_states=True)
-    batch_hidden_states = batch_outputs.hidden_states[-1][:, -1, :].detach()  # Shape: [batch_size, 1536]
-    print(f"Finished computing hidden states for all questions in batch")
-    # Assert hidden states have correct dimensions
-    assert batch_hidden_states.shape[1] == 1536, f"Hidden state dimension is {batch_hidden_states.shape[1]}, expected 1536"
-    
-    # Create mapping from question to its hidden state
-    hidden_states_map = {}
-    current_idx = 0
-    for q in questions:
-        if q['id'] not in completed_question_ids:
-            hidden_states_map[q['id']] = batch_hidden_states[current_idx]
-            current_idx += 1
-    
-    
-    print(f"Starting data generation for batch {batch_idx} of split {split}...")
-    questions = load_dynasor_dataset(dataset)
-    
-    for problem_id, question in enumerate(questions):
-        qid = question['id']
-        
-        # Skip if question is already completed
-        if qid in completed_question_ids:
-            print(f"Skipping completed question {qid}")
-            continue
-        prompt = batch_texts[problem_id]
-        target = question[problem_id]
-        probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
-        token_budgets = list(range(W, S + 1, W))
-        print(f"Executing question {problem_id} with token budgets {token_budgets}")
-        prop_correct, round_results_arr = execute_question_reuse(
-            model,
-            prompt,
-            target,
-            max_tokens=token_budgets,
-            probe=probe,
-            probe_tokens=10,
-            num_trials=100,
-            problem_id=problem_id,
-            output_dir=None,
-            top_p=0.95,
-            temperature=0.6,
-            tokenizer=tokenizer,  # Pass tokenizer to execute_question_reuse
-        )
-        
-        #early_generated_answers = []
-        #early_extracted_answers = []
-        #for round_results in sorted(round_results_arr, key=lambda x: x["max_tokens"]):
-        #    early_generated_answers.append(round_results["probe_prompts"])
-        #    early_extracted_answers.append(round_results["probe_responses"])
-        early_stop_correct_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) for round_results in sorted(round_results_arr, key=lambda x: x["max_tokens"])]
-             
-        all_data.append({
-                "dataset": dataset,
-                "question_id": qid,
-                "question_text": prompt,
-                "split": split,
-                "hidden_state": hidden_states_map[qid].cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
-                "trace_id": -1, # only 1 row per question
-                "early_stop_correct_proportions": early_stop_correct_proportions,
-                #"reasoning_trace": reasoning_trace,
-                #"early_generated_answers": early_generated_answers,
-                #"early_extracted_answers": early_extracted_answers
-        })
-        print(f"Early stop correct proportions: {early_stop_correct_proportions}")
-        
-        # Save intermediate results after each question
-        df = pd.DataFrame(all_data)
-        df.to_csv(output_csv, index=False)
-        print(f"Saved intermediate results to {output_csv}")
-    
-    # Final save (though this should be the same as the last intermediate save)
-    df = pd.DataFrame(all_data)
-    df.to_csv(output_csv, index=False)
-    print(f"Data saved to {output_csv}")
-
-def generate_data_old(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
     """
     Generate GSM8K reasoning trace data for a specific batch of questions.
     Processes questions from index batch_idx*batch_size to (batch_idx+1)*batch_size
@@ -401,8 +274,6 @@ def generate_data_old(batch_idx, split='train', num_traces=100, W=16, S=256, out
         batch_size: Number of questions per batch
     """
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
-    questions = load_dynasor_dataset(dataset)
-    '''
     if dataset == 'gsm8k':
         train_data, test_data = load_gsm8k_dataset()
         # Select the appropriate split
@@ -414,7 +285,6 @@ def generate_data_old(batch_idx, split='train', num_traces=100, W=16, S=256, out
         questions = test_data
     elif dataset == 'numina':
         questions = load_numina_dataset(split=split)
-    '''
     
     # Calculate batch bounds
     start_idx = batch_idx * batch_size
