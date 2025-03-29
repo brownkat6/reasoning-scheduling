@@ -39,6 +39,7 @@ def load_dynasor_dataset(dataset_name):
     Load a Dynasor dataset using the Dynasor utils.
     """
     assert dataset_name in ["amc23", "aime24", "GPQADiamond", "math500", "gsm8k"], f"Dataset {dataset_name} not supported"
+    print(f"Loading dataset {dataset_name} with dynasor utils")
     data = utils.load_dataset(dataset_name)
     test_data = []
     for i, sample in enumerate(data):
