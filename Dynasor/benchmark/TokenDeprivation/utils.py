@@ -80,20 +80,20 @@ def _load_gpqa_diamond():
     return rows
 
 
-def _load_jsonl_dataset(dataset_name):
+def _load_jsonl_dataset(dataset_name, split):
     data_path = os.path.join(
-        os.path.dirname(__file__), f"data/{dataset_name}/test.jsonl"
+        os.path.dirname(__file__), f"data/{dataset_name}/{split}.jsonl"
     )
     return load_jsonl(data_path)
 
 
-def load_dataset(dataset_name):
+def load_dataset(dataset_name, split="test"):
     dataset_loaders = {
         "GPQADiamond": _load_gpqa_diamond,
-        "amc23": lambda: _load_jsonl_dataset("amc23"),
-        "aime24": lambda: _load_jsonl_dataset("aime24"),
-        "math500": lambda: _load_jsonl_dataset("math500"),
-        "gsm8k": lambda: _load_jsonl_dataset("gsm8k"),
+        "amc23": lambda: _load_jsonl_dataset("amc23", split),
+        "aime24": lambda: _load_jsonl_dataset("aime24", split),
+        "math500": lambda: _load_jsonl_dataset("math500", split),
+        "gsm8k": lambda: _load_jsonl_dataset("gsm8k", split),
     }
 
     if dataset_name not in dataset_loaders:
