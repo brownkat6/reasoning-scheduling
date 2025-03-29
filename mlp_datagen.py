@@ -229,7 +229,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         
         # Run execute_question_reuse 10 times with 10 trials each
         all_round_results = []
-        for run_idx in range(4):
+        for run_idx in range(10):
             _, round_results = execute_question_reuse(
                 model,
                 prompt,
@@ -237,7 +237,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
                 max_tokens=token_budgets,
                 probe=probe,
                 probe_tokens=10,
-                num_trials=25,
+                num_trials=10,
                 problem_id=problem_id,
                 output_dir=None,
                 top_p=0.95,
