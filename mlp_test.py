@@ -351,10 +351,10 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         if qid in completed_question_ids:
             print(f"Skipping completed question {qid}")
             continue
+        prompt = run.apply_chat_template(batch_texts[problem_id], model.config._name_or_path)
+        target = question[problem_id]
         print(f"Prompt: {prompt}")
         print(f"Target: {target}")
-        prompt = batch_texts[problem_id]
-        target = question[problem_id]
         probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
         token_budgets = list(range(W, S + 1, W))
         print(f"Executing question {problem_id} with token budgets {token_budgets}")
