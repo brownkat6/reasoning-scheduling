@@ -196,6 +196,7 @@ def execute_question_reuse(
     results = []
     current_prompts = [apply_chat_template(prompt, model.config._name_or_path) for _ in range(num_trials)]
     is_vllm = isinstance(model, vllmClientModel)
+    assert(is_vllm==False)
     
     if not is_vllm:
         device = next(model.parameters()).device
@@ -320,6 +321,8 @@ def execute_question_reuse(
                 )
                 is_corrects.append(math_equal(finished_result, target))
             else:
+                print(f"Probe prompt: {probe_prompts[trial]}")
+                print(f"Probe response: {probe_responses[trial]}")
                 probe_result = extract_first_boxed_answer(
                     probe_prompts[trial] + probe_responses[trial].choices[0].text,
                     "aime24",
