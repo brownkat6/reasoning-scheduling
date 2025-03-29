@@ -170,11 +170,6 @@ def load_adaptive_results(adaptive_dir):
             accuracies.append(correct_count / total_count * 100)
         else:
             accuracies.append(0)
-    print(f"Load from {adaptive_dir}")
-    print("Token budgets: ", token_budgets)
-    print("Accuracies: ", accuracies)
-    print("Question counts: ", question_counts)
-    print(f"Budget dirs: {budget_dirs}")
     return token_budgets, accuracies, question_counts, predictions_vs_actuals
 
 def load_results(results_dir):
@@ -350,9 +345,9 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
         for token_budget in oracle_tokens:
             predicted_accuracies.append(100.0*np.mean([float(oracle_predictions[token_budget][qid]['predicted']) for qid in oracle_predictions[token_budget]]))
         print("Oracle predicted accuracies: ", predicted_accuracies)
-        plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle')
+        # plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle')
         # plots actual accuracies from 10 resampled reasoning traces
-        plt.plot(oracle_tokens, oracle_accuracies, 'p-', label='Adaptive (Oracle) Actual Resampled', marker='o')
+        plt.plot(oracle_tokens, oracle_accuracies, 'p-', label='Oracle', marker='o')
         
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
