@@ -217,23 +217,36 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
         token_budgets = list(range(W, S + 1, W))
         print(f"Executing question {problem_id} with token budgets {token_budgets}")
-        prop_correct, round_results_arr = execute_question_reuse(
-            model,
-            prompt,
-            target,
-            max_tokens=token_budgets,
-            probe=probe,
-            probe_tokens=10,
-            num_trials=100,
-            problem_id=problem_id,
-            output_dir=None,
-            top_p=0.95,
-            temperature=0.6,
-            tokenizer=tokenizer,  # Pass tokenizer to execute_question_reuse
-        )
         
-        early_stop_correct_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) for round_results in sorted(round_results_arr, key=lambda x: x["max_tokens"])]
         
+        # Run execute_question_reuse 4 times with 25 trials each
+        all_round_results = []
+        for run in range(4):
+            _, round_results_arr = execute_question_reuse(
+                model,
+                prompt,
+                target,
+                max_tokens=token_budgets,
+                probe=probe,
+                probe_tokens=10,
+                num_trials=25,
+                problem_id=problem_id,
+                output_dir=None,
+                top_p=0.95,
+                temperature=0.6,
+                tokenizer=tokenizer,
+            )
+            # Sort results by max_tokens and get correct proportions for this run
+            sorted_results = sorted(round_results_arr, key=lambda x: x["max_tokens"])
+            run_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) 
+                             for round_results in sorted_results]
+            all_round_results.append(run_proportions)
+        
+        # Average the proportions across all 4 runs
+        early_stop_correct_proportions = []
+        for i in range(len(token_budgets)):
+            avg_proportion = sum(run[i] for run in all_round_results) / 4
+            early_stop_correct_proportions.append(avg_proportion)
         all_data.append({
                 "dataset": dataset,
                 "question_id": qid,
