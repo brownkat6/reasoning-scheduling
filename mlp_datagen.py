@@ -50,7 +50,7 @@ def load_dynasor_dataset(dataset_name, split="test"):
         question = sample["problem"]
         answer_field = sample["answer"]
         ground_truth = answer_field.strip()
-        test_data.append({"id": f"test_{i}", "problem": question, "answer": ground_truth})
+        test_data.append({"id": f"{split}_{i}", "problem": question, "answer": ground_truth})
     return test_data
 
 def get_model_and_tokenizer():

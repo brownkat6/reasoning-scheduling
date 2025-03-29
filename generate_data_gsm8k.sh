@@ -39,6 +39,11 @@ fi
 GENERATE_X=$1
 GENERATE_Y=$2
 
+# Note that generating Y data is MUCH more expensive than generating X data
+# Example generates only X data: $ generate_data_gsm8k.sh True False
+# Example generates only Y data: $ generate_data_gsm8k.sh False True
+# Example generates both X and Y data: $ generate_data_gsm8k.sh True True
+
 # If GENERATE_X is true, call mlp_datagen.py with the GENERATE_X
 /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_datagen.py \
     --split $SPLIT \
