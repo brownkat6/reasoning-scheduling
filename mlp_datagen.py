@@ -82,7 +82,7 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     
     if start_idx >= len(questions):
         raise ValueError(f"Batch index {batch_idx} is too large for split {split} with {len(questions)} questions")
-    
+    model = model.half()
     # Get questions for this batch
     questions = questions[start_idx:end_idx]
     print(f"Loaded {len(questions)} batch questions")
@@ -151,6 +151,7 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
                 "hidden_state": hidden_state.cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
                 # TODO: add other predictors here! 
         })
+    
     
     # Final save
     df = pd.DataFrame(all_data)
@@ -279,7 +280,6 @@ def main():
     model, tokenizer = get_model_and_tokenizer()
     # Move model to GPU once
     model = model.to('cuda')
-    # move model to half-point precision to avoid OOM-ing
 
     if args.batch_idx is None:
         parser.error("--batch_idx is required when using --generate")
