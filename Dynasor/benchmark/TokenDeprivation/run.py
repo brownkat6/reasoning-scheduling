@@ -203,6 +203,9 @@ def execute_question_reuse(
     print(len(max_tokens),max_tokens,"max tokens to execute")
     round_results_arr = []
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
+        torch.cuda.empty_cache()
+        import gc
+        gc.collect()
         # Track which trials are finished
         if i == 0:
             is_finished = [False] * num_trials
