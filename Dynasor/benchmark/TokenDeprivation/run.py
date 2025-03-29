@@ -130,7 +130,8 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     
     # Filter active prompts
     active_prompts = [(i, prompt) for i, (prompt, is_active) in enumerate(zip(prompts, is_actives)) if is_active]
-    
+    from collections import Counter
+    print(f"Active prompts: {Counter(active_prompts)}")
     # Process in batches
     for i in range(0, len(active_prompts), batch_size):
         batch_indices, batch_prompts = zip(*active_prompts[i:i + batch_size])
@@ -172,6 +173,7 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     
     # Reconstruct full response list with None for inactive prompts
     full_responses = [None] * len(prompts)
+    print(f"Recnstructing {len(active_prompts)} responses")
     for (idx, _), response in zip(active_prompts, batch_responses):
         full_responses[idx] = response
     for i in range(len(full_responses)):
