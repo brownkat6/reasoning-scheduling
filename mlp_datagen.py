@@ -217,11 +217,13 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
         token_budgets = list(range(W, S + 1, W))
         print(f"Executing question {problem_id} with token budgets {token_budgets}")
+        print(f"Prompt: {prompt}")
+        print(f"Target: {target}")
         
         
         # Run execute_question_reuse 4 times with 25 trials each
         all_round_results = []
-        for r in range(4):
+        for r in range(10):
             _, round_results_arr = execute_question_reuse(
                 model,
                 prompt,
@@ -229,7 +231,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
                 max_tokens=token_budgets,
                 probe=probe,
                 probe_tokens=10,
-                num_trials=25,
+                num_trials=10,
                 problem_id=problem_id,
                 output_dir=None,
                 top_p=0.95,
