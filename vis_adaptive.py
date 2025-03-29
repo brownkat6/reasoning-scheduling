@@ -170,7 +170,11 @@ def load_adaptive_results(adaptive_dir):
             accuracies.append(correct_count / total_count * 100)
         else:
             accuracies.append(0)
-    
+    print(f"Load from {adaptive_dir}")
+    print("Token budgets: ", token_budgets)
+    print("Accuracies: ", accuracies)
+    print("Question counts: ", question_counts)
+    print(f"Budget dirs: {budget_dirs}")
     return token_budgets, accuracies, question_counts, predictions_vs_actuals
 
 def load_results(results_dir):
