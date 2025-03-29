@@ -130,8 +130,6 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     
     # Filter active prompts
     active_prompts = [(i, prompt) for i, (prompt, is_active) in enumerate(zip(prompts, is_actives)) if is_active]
-    from collections import Counter
-    print(f"Active prompts: {Counter(is_actives)}")
     # Process in batches
     batch_responses = []
     for i in range(0, len(active_prompts), batch_size):
