@@ -173,8 +173,8 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     
     # Reconstruct full response list with None for inactive prompts
     full_responses = [None] * len(prompts)
-    print(f"Recnstructing {len(active_prompts)} responses")
-    print("indices",sorted(active_prompts))
+    print(f"Reconstructing {len(active_prompts)} responses")
+    print("indices",sorted([e[0] for e in active_prompts]))
     for (idx, _), response in zip(active_prompts, batch_responses):
         if response is None:
             print(f"Setting response {idx} to None")
@@ -329,7 +329,7 @@ def execute_question_reuse(
                 )
                 is_corrects.append(math_equal(finished_result, target))
             else:
-                print(f"Probe prompt: {probe_prompts[trial]}")
+                #print(f"Probe prompt: {probe_prompts[trial]}")
                 print(f"Probe response: {probe_responses[trial]}")
                 probe_result = extract_first_boxed_answer(
                         probe_prompts[trial] + probe_responses[trial].choices[0].text,
