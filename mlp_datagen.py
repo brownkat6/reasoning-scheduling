@@ -61,7 +61,7 @@ def get_model_and_tokenizer():
     model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
-        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers", device_map="auto")
         model.eval()
         #model.gradient_checkpointing_enable()
     except Exception as e:
@@ -104,7 +104,7 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
     # Move model to GPU once
-    model = model.to('cuda')
+    # model = model.to('cuda')
 
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")

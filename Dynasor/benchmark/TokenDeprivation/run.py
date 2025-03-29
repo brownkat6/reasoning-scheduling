@@ -146,6 +146,8 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
         torch.cuda.empty_cache()
         import gc
         gc.collect()
+        # print out the amount of free CUDA memory here
+        print(torch.cuda.memory_summary(device=device, abbreviated=False))
         with torch.inference_mode():
             print(f"Generating batch of {len(batch_prompts)} prompts with shape {inputs.input_ids.shape} with {max_new_tokens} tokens")
             outputs = model.generate(
