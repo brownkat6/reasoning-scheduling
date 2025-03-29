@@ -298,8 +298,6 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     # Move model to GPU once
     model = model.to('cuda')
 
-    early_stopping_positions = list(range(W, S + 1, W))  # e.g., 16, 32, ... 4096
-
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
     batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in batch_texts if q['id'] not in completed_question_ids]
@@ -334,6 +332,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         if qid in completed_question_ids:
             print(f"Skipping completed question {qid}")
             continue
+        print(f"Prompt: {prompt}")
+        print(f"Target: {target}")
         prompt = batch_texts[problem_id]
         target = question[problem_id]
         probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
@@ -374,6 +374,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
                 #"early_extracted_answers": early_extracted_answers
         })
         print(f"Early stop correct proportions: {early_stop_correct_proportions}")
+        
         
         # Save intermediate results after each question
         df = pd.DataFrame(all_data)
@@ -1077,7 +1078,8 @@ def main():
     
     args = parser.parse_args()
     
-    csv_file = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.csv_file
+    STEM="/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling_new/"
+    csv_file = STEM+args.csv_file
     
 
     if args.generate:
@@ -1089,8 +1091,8 @@ def main():
     elif args.train:
         if args.train_data_dir is None or args.test_data_dir is None:
             parser.error("--train_data_dir and --test_data_dir are required when using --train")
-        train_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.train_data_dir
-        test_data_dir = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"+args.test_data_dir
+        train_data_dir = STEM+args.train_data_dir
+        test_data_dir = STEM+args.test_data_dir
         train_mlp(
             train_data_dir=train_data_dir,
             train_split=args.train_split,
