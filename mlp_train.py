@@ -16,7 +16,7 @@ from Dynasor.benchmark.TokenDeprivation import run
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-# Script to train an MLP
+# Script to train an MLP and report metrics on a train and test set
 
 def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
               test_data_dir='', test_split='test', test_dataset='gsm8k',

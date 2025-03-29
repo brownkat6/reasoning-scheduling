@@ -1,5 +1,6 @@
 '''
-Save datasets with keys "problem" and "answer"
+Save datasets with keys "problem" and "answer" in the Dynasor data directory.
+Only needs to be run once.
 
 TODO: similarly to how mlp_test.py loads numina, and gsm8k data from huggingface, load this data
 and save it in the form of a {dataset_name}/test.jsonl file where keys include "problem" and "answer"

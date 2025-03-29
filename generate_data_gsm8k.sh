@@ -35,11 +35,16 @@ else
     BATCH_IDX=$((SLURM_ARRAY_TASK_ID - 75))
 fi
 
-# Run the Python script
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_test.py \
-    --generate \
+# Parse GENERATE_X from the first command line arg and GENERATE_Y from the second command line arg
+GENERATE_X=$1
+GENERATE_Y=$2
+
+# If GENERATE_X is true, call mlp_datagen.py with the GENERATE_X
+/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_datagen.py \
     --split $SPLIT \
     --batch_idx $BATCH_IDX \
-    --csv_file "data/gsm8k_results/gsm8k_results_${SPLIT}_${BATCH_IDX}.csv"
+    --dataset gsm8k \
+    --generate-X-data $GENERATE_X \
+    --generate-Y-data $GENERATE_Y
 
 echo "Completed processing $SPLIT split, batch $BATCH_IDX" 

@@ -1,8 +1,8 @@
 '''
 # Proof of concept: can MLP on hidden states predict required size? 
-Model: distilled Qwen 1.5B model. Dataset: "amc23", "aime24", "GPQADiamond", "math500", "gsm8k". $W=16$. Max new tokens $S=4096$.    
+Model: distilled Qwen 1.5B model. Datasets: "amc23", "aime24", "GPQADiamond", "math500", "gsm8k". $W=16$. Max new tokens $S=4096$.    
 MLP predictor: $\mathbb{R}^{1536}$ -> H=128 -> $\mathbb{R}^{S/W}.  
-For each question $q$ in GSM8K, sample 100 reasoning traces. For each reasoning trace, test
+For each question $q$, sample 100 reasoning traces. For each reasoning trace, test
 post-hoc whether we would have generated the answer if we had stopped generating tokens after W, 2W, 3W,...,S tokens, inserted the suffix "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n\\[\\boxed{" to force a solution. Compute the proportion of the 100 samples for which the early terminated answer would have been correct. This yields a $W/S$ element vector of proportions in range [0,1]. If a sampled reasoning trace only has, for instance, 100 tokens, then the early stopping probability after 200 tokens is just the proportion after 100 tokens elapsed.   
 
 On the train/test set, compute MSE as well as the pearson correlation between predicted and actual proportions.  Ideally not overfit within GSM8K. If this goes well, test correlation as well on another dataset, maybe Math500 (secondary math domain which might require secondary model as evaluator) or MMLU (MCQ domain). In the best of all worlds the performance generalizes.   
@@ -11,6 +11,12 @@ On the train/test set, compute MSE as well as the pearson correlation between pr
 2) Sample 100 reasoning traces up to S=4096 new tokens per question, generated with temperature 0.6. For each sampled trace, generate the answer if we had stopped after W,2W,3W,... tokens. For each sampled trace, store a list of the W/S generated answers, a W/S length list of 0/1 indicating whether a given answer was correct, and the proportion of answers that were correct.  
 3) Generate a pandas dataframe with 1 rows per question in GSM8K. The columns should be the GSM8K question id, the question text itself, whether the question is from the train or test split, the hidden state from the model from the first forward pass of the question (before any reasoning/answer tokens are generated), the reasoning trace id, the generated reasoning trace, the list of W/S generated answers if we had stopped early after any point, inserted the answer suffix and generated and extracted a numerical answer, the list of W/S extracted answers, and the corresponding list of W/S proportions across all 100 traces for this query that were correct. Note that within the group of 100 rows corresponding to a single GSM8K question, the question id, question text itself, hidden state, and list of proportions after early stopping after each point will all be shared. Save the computed data to a csv.      
 4) Write separate python code that loads the pandas dataframe from csv after it has been computed.  The new python code should construct an MLP that takes in the 1536 dimension hidden states as input, has one hidden layer with dimension 128, and outputs a W/S dimensional vector. It should be trained on a dataset with one entry per question in the GSM8K dataset, where the input is the hidden state and the output is the W/S dimensional list of proportions. The code should report the MSE on both the train and the test set, and it should also output data about, for each W/S possible early stopping position, the pearson correlation between the predicted value and the actual value.  It should report MSE both across the entire predicted and actual output and across each individual entry of the W/S output individually.  
+
+Data quantities
+    GSM8K: ~13XX test, 74XX train
+    numina: 859K train, 100 test
+    amc23: 50 test
+    aime24: 90 test
 '''
 
 import argparse
@@ -28,6 +34,7 @@ from datasets import load_dataset
 from Dynasor.benchmark.TokenDeprivation import utils
 from Dynasor.benchmark.TokenDeprivation.run import execute_question_reuse
 from Dynasor.benchmark.TokenDeprivation import run
+from Dynasor.dynasor.core.evaluator import math_equal
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -60,9 +67,12 @@ def get_model_and_tokenizer():
         raise RuntimeError(f"Error loading model {model_name}: {e}")
     return model, tokenizer
 
-from Dynasor.dynasor.core.evaluator import math_equal
-
-def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+    '''
+    This function generates the X data, which is the hidden states of the model.
+    This script is MUCH cheaper to run than generate_data_Y because it doesn't require generating any reasoning traces.
+    This function should be modified to generate predictors other than the hidden states if we are sweeping over multiple predictors.
+    '''
     questions = load_dynasor_dataset(dataset, split=split)
     print(f"Loaded {len(questions)} total questions")
     # Calculate batch bounds
@@ -81,8 +91,6 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         try:
             print(f"Loading existing results from {output_csv}")
             existing_df = pd.read_csv(output_csv)
-            print(existing_df.shape)
-            print(existing_df.columns)
             # Count number of traces per question
             trace_counts = existing_df.groupby('question_id').size()
             # Get questions with all traces completed
@@ -138,10 +146,62 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
             hidden_states_map[q['id']] = batch_hidden_states[current_idx]
             current_idx += 1
     
+    # Create the dataframe data
+    for qid, hidden_state in hidden_states_map.items():
+        all_data.append({
+                "dataset": dataset,
+                "question_id": qid,
+                "split": split,
+                "hidden_state": hidden_state.cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
+                # TODO: add other predictors here! 
+        })
     
+    # Final save
+    df = pd.DataFrame(all_data)
+    df.to_csv(output_csv, index=False)
+    print(f"Data saved to {output_csv}")
+
+
+def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+    '''
+    This function generates the Y data, which is the early stopping correct proportions.
+    It doesn't generate any of the predictors.
+    This script is VERY expensive to run because it requires generating 100 reasoning traces for each question,
+    and for each reasoning trace, probing the model with the probe string and extracting an answer every W tokens.
+    '''
+    questions = load_dynasor_dataset(dataset, split=split)
+    print(f"Loaded {len(questions)} total questions")
+    # Calculate batch bounds
+    start_idx = batch_idx * batch_size
+    end_idx = min((batch_idx + 1) * batch_size, len(questions))
+    
+    if start_idx >= len(questions):
+        raise ValueError(f"Batch index {batch_idx} is too large for split {split} with {len(questions)} questions")
+    
+    # Get questions for this batch
+    questions = questions[start_idx:end_idx]
+    print(f"Loaded {len(questions)} batch questions")
+    completed_question_ids = set()
+    all_data = []
+    if os.path.exists(output_csv):
+        try:
+            print(f"Loading existing results from {output_csv}")
+            existing_df = pd.read_csv(output_csv)
+            # Count number of traces per question
+            trace_counts = existing_df.groupby('question_id').size()
+            # Get questions with all traces completed
+            completed_question_ids = set(trace_counts[trace_counts >= 1].index)
+            all_data = existing_df.to_dict('records')
+            print(f"Found {len(completed_question_ids)} completed questions")
+        except Exception as e:
+            print(f"Error loading existing results from {output_csv}: {e}")
+    
+    # Load the Qwen model and tokenizer
+    model, tokenizer = get_model_and_tokenizer()
+    # Move model to GPU once
+    model = model.to('cuda')
+
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
-    
-    
     for problem_id, question in enumerate(questions):
         qid = question['id']
         
@@ -151,8 +211,6 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
             continue
         prompt = run.apply_chat_template(question["problem"], model.config._name_or_path)
         target = question["answer"]
-        print(f"Prompt: {prompt}")
-        print(f"Target: {target}")
         probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
         token_budgets = list(range(W, S + 1, W))
         print(f"Executing question {problem_id} with token budgets {token_budgets}")
@@ -172,14 +230,12 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         )
         
         early_stop_correct_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) for round_results in sorted(round_results_arr, key=lambda x: x["max_tokens"])]
-             
+        
         all_data.append({
                 "dataset": dataset,
                 "question_id": qid,
                 "question_text": prompt,
                 "split": split,
-                "hidden_state": hidden_states_map[qid].cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
-                "trace_id": -1, # only 1 row per question
                 "early_stop_correct_proportions": early_stop_correct_proportions,
         })
         print(f"Early stop correct proportions: {early_stop_correct_proportions}")
@@ -198,25 +254,30 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
 
 def main():
     parser = argparse.ArgumentParser(description="MLP test experiment for reasoning traces")
-    parser.add_argument("--generate", action="store_true", help="Run data generation experiment")
-    parser.add_argument("--train", action="store_true", help="Train the MLP on generated data")
-    parser.add_argument("--batch_idx", type=int, help="Batch index for data generation (required with --generate)")
+    parser.add_argument("--batch_idx", type=int, required=True, help="Batch index for data generation (required with --generate)")
     parser.add_argument("--split", type=str, choices=['train', 'test'], help="Which split to process (required with --generate)")
-    parser.add_argument("--csv_file", type=str, default="gsm8k_results.csv", help="CSV file to load/save generated data")
     parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
+    parser.add_argument("--generate-X-data", type=bool, default=False, help="Generate X data")
+    parser.add_argument("--generate-Y-data", type=bool, default=False, help="Generate Y data")
     
     args = parser.parse_args()
     
     STEM="/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling_new/"
-    csv_file = STEM+args.csv_file
+    csv_file_X = f"data/{args.dataset}_results/{args.dataset}_X_{args.split}_{args.batch_idx}.csv"
+    csv_file_Y = f"data/{args.dataset}_results/{args.dataset}_Y_{args.split}_{args.batch_idx}.csv"
+    csv_file_X = STEM+csv_file_X
+    csv_file_Y = STEM+csv_file_Y
     
 
     if args.batch_idx is None:
         parser.error("--batch_idx is required when using --generate")
     if args.split is None:
         parser.error("--split is required when using --generate")
-    generate_data(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file, dataset=args.dataset, S=args.S)
+    if args.generate_X_data:
+        generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, dataset=args.dataset, S=args.S)
+    if args.generate_Y_data:
+        generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S)
 
 
 if __name__ == "__main__":
