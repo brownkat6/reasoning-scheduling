@@ -172,16 +172,8 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     
     # Reconstruct full response list with None for inactive prompts
     full_responses = [None] * len(prompts)
-    print(f"Reconstructing {len(active_prompts)} responses")
-    print(len(batch_responses),"batch responses")
-    print("indices",sorted([e[0] for e in active_prompts]))
     for (idx, _), response in zip(active_prompts, batch_responses):
-        if response is None:
-            print(f"Setting response {idx} to None")
-        else:
-            print(f"Non-None: Setting response {idx} to {response}")
         full_responses[idx] = response
-    print(f"Responses that are None:",[i for i, response in enumerate(full_responses) if response is None])
     return full_responses
 
 
@@ -257,7 +249,7 @@ def execute_question_reuse(
                     max_new_tokens=remaining_tokens,
                     top_p=top_p,
                     temperature=temperature,
-                    # is_actives=[not finished for finished in is_finished]
+                    is_actives=[not finished for finished in is_finished]
                 )
 
         # Process responses and create completions
@@ -311,7 +303,7 @@ def execute_question_reuse(
                 max_new_tokens=probe_tokens,
                 top_p=top_p,
                 temperature=temperature,
-                # is_actives=[not finished for finished in is_finished]
+                is_actives=[not finished for finished in is_finished]
             )
 
         round_results["probe_prompts"] = probe_prompts
@@ -328,8 +320,6 @@ def execute_question_reuse(
                 )
                 is_corrects.append(math_equal(finished_result, target))
             else:
-                #print(f"Probe prompt: {probe_prompts[trial]}")
-                print(f"Probe response: {probe_responses[trial]}")
                 probe_result = extract_first_boxed_answer(
                         probe_prompts[trial] + probe_responses[trial].choices[0].text,
                         "aime24",
