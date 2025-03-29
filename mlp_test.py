@@ -306,11 +306,28 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     if not batch_texts:  # Skip if all questions are completed
         print("All questions in batch already completed")
         return
+    
+    # Compute hidden states
+    # Process in batches of 16
+    batch_size = 16
+    all_hidden_states = []
+    
+    for i in range(0, len(batch_texts), batch_size):
+        batch_slice = batch_texts[i:i + batch_size]
+        batch_inputs = tokenizer(batch_slice, return_tensors="pt", padding=True).to('cuda')
         
-    batch_inputs = tokenizer(batch_texts, return_tensors="pt", padding=True).to('cuda')
-    with torch.inference_mode():
-        batch_outputs = model(**batch_inputs, output_hidden_states=True)
-    batch_hidden_states = batch_outputs.hidden_states[-1][:, -1, :].detach()  # Shape: [batch_size, 1536]
+        with torch.inference_mode():
+            batch_outputs = model(**batch_inputs, output_hidden_states=True)
+            # Get hidden states for this batch
+            hidden_states = batch_outputs.hidden_states[-1][:, -1, :].detach()  # Shape: [batch_size, 1536]
+            all_hidden_states.append(hidden_states)
+            
+        # Clear CUDA cache after each batch
+        torch.cuda.empty_cache()
+    
+    # Concatenate all batches
+    batch_hidden_states = torch.cat(all_hidden_states, dim=0)  # Shape: [total_size, 1536]
+    
     print(f"Finished computing hidden states for all questions in batch")
     # Assert hidden states have correct dimensions
     assert batch_hidden_states.shape[1] == 1536, f"Hidden state dimension is {batch_hidden_states.shape[1]}, expected 1536"
