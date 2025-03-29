@@ -277,6 +277,7 @@ def format_deepseek_prompt(user_message: str) -> str:
 
 
 def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+    questions = load_dynasor_dataset(dataset)
     completed_question_ids = set()
     all_data = []
     if os.path.exists(output_csv):
@@ -299,7 +300,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
 
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
-    batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in batch_texts if q['id'] not in completed_question_ids]
+    batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in questions if q['question_id'] not in completed_question_ids]
     if not batch_texts:  # Skip if all questions are completed
         print("All questions in batch already completed")
         return
@@ -322,7 +323,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     
     
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
-    questions = load_dynasor_dataset(dataset)
+    
     
     for problem_id, question in enumerate(questions):
         qid = question['id']
