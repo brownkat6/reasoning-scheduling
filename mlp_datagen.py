@@ -227,25 +227,34 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         print(f"Prompt: {prompt}")
         print(f"Target: {target}")
         
-        # Run execute_question_reuse once with 100 trials
-        _, round_results_arr = execute_question_reuse(
-            model,
-            prompt,
-            target,
-            max_tokens=token_budgets,
-            probe=probe,
-            probe_tokens=10,
-            num_trials=10,
-            problem_id=problem_id,
-            output_dir=None,
-            top_p=0.95,
-            temperature=0.6,
-            tokenizer=tokenizer,
-        )
-        # Sort results by max_tokens and get correct proportions
-        sorted_results = sorted(round_results_arr, key=lambda x: x["max_tokens"])
-        early_stop_correct_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) 
-                         for round_results in sorted_results]
+        # Run execute_question_reuse 5 times with 20 trials each
+        all_proportions = []
+        for run in range(5):
+            _, round_results_arr = execute_question_reuse(
+                model,
+                prompt,
+                target,
+                max_tokens=token_budgets,
+                probe=probe,
+                probe_tokens=10,
+                num_trials=20,
+                problem_id=problem_id,
+                output_dir=None,
+                top_p=0.95,
+                temperature=0.6,
+                tokenizer=tokenizer,
+            )
+            # Sort results by max_tokens and get correct proportions for this run
+            sorted_results = sorted(round_results_arr, key=lambda x: x["max_tokens"])
+            run_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) 
+                             for round_results in sorted_results]
+            all_proportions.append(run_proportions)
+            
+        # Average the proportions across all 5 runs
+        early_stop_correct_proportions = [
+            sum(run[i] for run in all_proportions) / 5
+            for i in range(len(token_budgets))
+        ]
         
         all_data.append({
                 "dataset": dataset,
