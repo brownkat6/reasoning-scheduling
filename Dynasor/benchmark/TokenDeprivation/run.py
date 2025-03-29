@@ -143,6 +143,7 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
             truncation=True
         ).to(device)
         
+        torch.cuda.empty_cache()
         with torch.inference_mode():
             outputs = model.generate(
                 inputs.input_ids,
