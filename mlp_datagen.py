@@ -221,7 +221,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         
         # Run execute_question_reuse 4 times with 25 trials each
         all_round_results = []
-        for run in range(4):
+        for r in range(4):
             _, round_results_arr = execute_question_reuse(
                 model,
                 prompt,
@@ -245,7 +245,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         # Average the proportions across all 4 runs
         early_stop_correct_proportions = []
         for i in range(len(token_budgets)):
-            avg_proportion = sum(run[i] for run in all_round_results) / 4
+            avg_proportion = sum(r[i] for r in all_round_results) / 4
             early_stop_correct_proportions.append(avg_proportion)
         all_data.append({
                 "dataset": dataset,
