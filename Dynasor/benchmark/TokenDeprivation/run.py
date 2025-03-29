@@ -147,7 +147,7 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
         import gc
         gc.collect()
         with torch.inference_mode():
-            print(f"Generating batch of {len(batch_prompts)} prompts with shape {inputs.input_ids.shape} with {max_new_tokens} tokens")
+            # print(f"Generating batch of {len(batch_prompts)} prompts with shape {inputs.input_ids.shape} with {max_new_tokens} tokens")
             outputs = model.generate(
                 inputs.input_ids,
                 attention_mask=inputs.attention_mask,

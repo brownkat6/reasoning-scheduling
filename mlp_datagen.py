@@ -229,7 +229,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         
         # Run execute_question_reuse 10 times with 10 trials each
         all_round_results = []
-        for run_idx in range(10):
+        for run_idx in range(4):
             _, round_results = execute_question_reuse(
                 model,
                 prompt,
@@ -237,7 +237,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
                 max_tokens=token_budgets,
                 probe=probe,
                 probe_tokens=10,
-                num_trials=10,
+                num_trials=25,
                 problem_id=problem_id,
                 output_dir=None,
                 top_p=0.95,
@@ -255,7 +255,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
             # Average the correct proportions
             avg_proportion = np.mean([sum(r["is_corrects"])/len(r["is_corrects"]) 
                                     for r in run_results])
-            early_stop_correct_proportions.append(avg_proportion)
+            early_stop_correct_proportions.append(np.round(avg_proportion, 2))
         
         all_data.append({
                 "dataset": dataset,
