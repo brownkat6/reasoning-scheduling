@@ -385,7 +385,7 @@ def main():
         print(f"Prompt: {prompt}")
         print("-" * 100)
         token_budgets = list(range(args.step, args.max_tokens + args.step, args.step))
-        batch_results = execute_question_reuse(
+        batch_results, stats = execute_question_reuse(
             model,
             prompt,
             target,
