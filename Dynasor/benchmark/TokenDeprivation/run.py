@@ -250,7 +250,7 @@ def execute_question_reuse(
                     max_new_tokens=remaining_tokens,
                     top_p=top_p,
                     temperature=temperature,
-                    is_actives=[not finished for finished in is_finished]
+                    # is_actives=[not finished for finished in is_finished]
                 )
 
         # Process responses and create completions
@@ -304,7 +304,7 @@ def execute_question_reuse(
                 max_new_tokens=probe_tokens,
                 top_p=top_p,
                 temperature=temperature,
-                is_actives=[not finished for finished in is_finished]
+                # is_actives=[not finished for finished in is_finished]
             )
 
         round_results["probe_prompts"] = probe_prompts
@@ -323,18 +323,10 @@ def execute_question_reuse(
             else:
                 print(f"Probe prompt: {probe_prompts[trial]}")
                 print(f"Probe response: {probe_responses[trial]}")
-                try:
-                    probe_result = extract_first_boxed_answer(
+                probe_result = extract_first_boxed_answer(
                         probe_prompts[trial] + probe_responses[trial].choices[0].text,
                         "aime24",
-                    )
-                except:
-                    print(f"Failed to extract first boxed answer, extracting answer instead")
-                    print(f"Current prompt: {current_prompts[trial]}")
-                    print(f"Completion: {completions[trial][0]}")
-                    probe_result = extract_answer(
-                        current_prompts[trial] + completions[trial][0], "aime24"
-                    )
+                )
                 is_corrects.append(math_equal(probe_result, target))
 
             is_corrects_original.append(
