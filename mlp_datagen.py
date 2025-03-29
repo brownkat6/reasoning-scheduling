@@ -262,6 +262,8 @@ def main():
     parser.add_argument("--generate-Y-data", type=bool, default=False, help="Generate Y data")
     
     args = parser.parse_args()
+    print("generate_X_data: ", args.generate_X_data)
+    print("generate_Y_data: ", args.generate_Y_data)
     
     STEM="/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling_new/"
     csv_file_X = f"data/{args.dataset}_results/{args.dataset}_X_{args.split}_{args.batch_idx}.csv"
