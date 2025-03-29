@@ -227,25 +227,35 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         print(f"Prompt: {prompt}")
         print(f"Target: {target}")
         
-        # Run execute_question_reuse once with 100 trials
-        _, round_results_arr = execute_question_reuse(
-            model,
-            prompt,
-            target,
-            max_tokens=token_budgets,
-            probe=probe,
-            probe_tokens=10,
-            num_trials=10,
-            problem_id=problem_id,
-            output_dir=None,
-            top_p=0.95,
-            temperature=0.6,
-            tokenizer=tokenizer,
-        )
-        # Sort results by max_tokens and get correct proportions
-        sorted_results = sorted(round_results_arr, key=lambda x: x["max_tokens"])
-        early_stop_correct_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) 
-                         for round_results in sorted_results]
+        # Run execute_question_reuse 10 times with 10 trials each
+        all_round_results = []
+        for run_idx in range(10):
+            _, round_results = execute_question_reuse(
+                model,
+                prompt,
+                target,
+                max_tokens=token_budgets,
+                probe=probe,
+                probe_tokens=10,
+                num_trials=10,
+                problem_id=problem_id,
+                output_dir=None,
+                top_p=0.95,
+                temperature=0.6,
+                tokenizer=tokenizer,
+            )
+            all_round_results.append(round_results)
+
+        # For each token budget, average the correct proportions across the 10 runs
+        early_stop_correct_proportions = []
+        for token_idx in range(len(token_budgets)):
+            # Get results for this token budget from each run
+            run_results = [sorted(results, key=lambda x: x["max_tokens"])[token_idx] 
+                         for results in all_round_results]
+            # Average the correct proportions
+            avg_proportion = np.mean([sum(r["is_corrects"])/len(r["is_corrects"]) 
+                                    for r in run_results])
+            early_stop_correct_proportions.append(avg_proportion)
         
         all_data.append({
                 "dataset": dataset,
