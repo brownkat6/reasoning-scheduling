@@ -277,7 +277,6 @@ def format_deepseek_prompt(user_message: str) -> str:
 
 
 def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
-    assert model is not None, "Model must be provided"
     completed_question_ids = set()
     all_data = []
     if os.path.exists(output_csv):
