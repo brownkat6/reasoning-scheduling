@@ -174,7 +174,10 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
     full_responses = [None] * len(prompts)
     for (idx, _), response in zip(active_prompts, batch_responses):
         full_responses[idx] = response
-    
+    for i in range(len(full_responses)):
+        if full_responses[i] is None:
+            print(f"Full response {i} is None")
+            print(f"Prompt: {prompts[i]}")
     return full_responses
 
 
