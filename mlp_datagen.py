@@ -170,9 +170,6 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     This script is VERY expensive to run because it requires generating 100 reasoning traces for each question,
     and for each reasoning trace, probing the model with the probe string and extracting an answer every W tokens.
     '''
-    # move model to half-point precision to avoid OOM-ing
-    model = model.half()  # Converts all floating point parameters to float16
-    
     questions = load_dynasor_dataset(dataset, split=split)
     print(f"Loaded {len(questions)} total questions")
     # Calculate batch bounds
@@ -204,6 +201,8 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     model, tokenizer = get_model_and_tokenizer()
     # Move model to GPU once
     model = model.to('cuda')
+    # move model to half-point precision to avoid OOM-ing
+    model = model.half()  # Converts all floating point parameters to float16
 
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
     for problem_id, question in enumerate(questions):
