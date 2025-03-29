@@ -231,7 +231,7 @@ def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
             diff = act - pred
             total_abs_diff += abs(diff)
             
-            print(f"{budget:11d} | {qid:10d} | {pred:8.3f} | {act:6.3f} | {data['num_trials']:6d} | {diff:+9.3f}")
+            # print(f"{budget:11d} | {qid:10d} | {pred:8.3f} | {act:6.3f} | {data['num_trials']:6d} | {diff:+9.3f}")
         
         # Only calculate average for questions with predictions
         valid_predictions = sum(1 for qid in predictions_vs_actuals[budget] 
