@@ -295,7 +295,6 @@ def main():
     csv_file_Y = f"data/{args.dataset}_results/{args.dataset}_Y_{args.split}_{args.batch_idx}.csv"
     csv_file_X = STEM+csv_file_X
     csv_file_Y = STEM+csv_file_Y
-    
 
     if args.batch_idx is None:
         parser.error("--batch_idx is required when using --generate")
