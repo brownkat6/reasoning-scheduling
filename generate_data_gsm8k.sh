@@ -3,8 +3,8 @@
 #SBATCH --partition=gpu_requeue
 #SBATCH --output=logs/gsm8k_%A_%a.out   # Standard output and error log
 #SBATCH --error=logs/gsm8k_%A_%a.err    # Standard error file
-##SBATCH --array=0-88               # 75 train batches + 14 test batches
-#SBATCH --array=0-13               # 75 train batches + 14 test batches
+#SBATCH --array=0-88               # 75 train batches + 14 test batches
+##SBATCH --array=0-13               # 75 train batches + 14 test batches
 #SBATCH --time=4:00:00             # Time limit
 #SBATCH --nodes=1                   # Number of nodes
 #SBATCH --ntasks=1                 # Number of tasks
