@@ -68,7 +68,7 @@ def get_model_and_tokenizer():
         raise RuntimeError(f"Error loading model {model_name}: {e}")
     return model, tokenizer
 
-def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k', model=None, tokenizer=None):
     '''
     This function generates the X data, which is the hidden states of the model.
     This script is MUCH cheaper to run than generate_data_Y because it doesn't require generating any reasoning traces.
@@ -100,11 +100,6 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
             print(f"Found {len(completed_question_ids)} completed questions")
         except Exception as e:
             print(f"Error loading existing results from {output_csv}: {e}")
-    
-    # Load the Qwen model and tokenizer
-    model, tokenizer = get_model_and_tokenizer()
-    # Move model to GPU once
-    model = model.to('cuda')
 
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
@@ -163,7 +158,7 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     print(f"Data saved to {output_csv}")
 
 
-def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k', model=None, tokenizer=None):
     '''
     This function generates the Y data, which is the early stopping correct proportions.
     It doesn't generate any of the predictors.
@@ -197,12 +192,6 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         except Exception as e:
             print(f"Error loading existing results from {output_csv}: {e}")
     
-    # Load the Qwen model and tokenizer
-    model, tokenizer = get_model_and_tokenizer()
-    # Move model to GPU once
-    model = model.to('cuda')
-    # move model to half-point precision to avoid OOM-ing
-    model = model.half()  # Converts all floating point parameters to float16
 
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
     for problem_id, question in enumerate(questions):
@@ -221,28 +210,25 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         print(f"Target: {target}")
         
         
-        # Run execute_question_reuse 4 times with 25 trials each
-        all_round_results = []
-        for r in range(10):
-            _, round_results_arr = execute_question_reuse(
-                model,
-                prompt,
-                target,
-                max_tokens=token_budgets,
-                probe=probe,
-                probe_tokens=10,
-                num_trials=10,
-                problem_id=problem_id,
-                output_dir=None,
-                top_p=0.95,
-                temperature=0.6,
-                tokenizer=tokenizer,
-            )
-            # Sort results by max_tokens and get correct proportions for this run
-            sorted_results = sorted(round_results_arr, key=lambda x: x["max_tokens"])
-            run_proportions = [sum(round_results["is_corrects"])/len(round_results["is_corrects"]) 
-                             for round_results in sorted_results]
-            all_round_results.append(run_proportions)
+        # Run execute_question_reuse once with 100 trials
+        _, round_results_arr = execute_question_reuse(
+            model,
+            prompt,
+            target,
+            max_tokens=token_budgets,
+            probe=probe,
+            probe_tokens=10,
+            num_trials=100,
+            problem_id=problem_id,
+            output_dir=None,
+            top_p=0.95,
+            temperature=0.6,
+            tokenizer=tokenizer,
+        )
+        # Sort results by max_tokens and get correct proportions
+        sorted_results = sorted(round_results_arr, key=lambda x: x["max_tokens"])
+        all_round_results = [[sum(round_results["is_corrects"])/len(round_results["is_corrects"]) 
+                         for round_results in sorted_results]]
         
         # Average the proportions across all 4 runs
         early_stop_correct_proportions = []
@@ -289,6 +275,11 @@ def main():
     csv_file_X = STEM+csv_file_X
     csv_file_Y = STEM+csv_file_Y
     
+    # Load the Qwen model and tokenizer
+    model, tokenizer = get_model_and_tokenizer()
+    # Move model to GPU once
+    model = model.to('cuda')
+    # move model to half-point precision to avoid OOM-ing
 
     if args.batch_idx is None:
         parser.error("--batch_idx is required when using --generate")
@@ -296,10 +287,10 @@ def main():
         parser.error("--split is required when using --generate")
     if args.generate_X_data=="True":
         print(f"Generating X data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
-        generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, dataset=args.dataset, S=args.S)
+        generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, dataset=args.dataset, S=args.S, model=model, tokenizer=tokenizer)
     if args.generate_Y_data=="True":
         print(f"Generating Y data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
-        generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S)
+        generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S, model=model, tokenizer=tokenizer)
 
 
 if __name__ == "__main__":
