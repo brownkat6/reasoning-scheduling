@@ -351,8 +351,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         if qid in completed_question_ids:
             print(f"Skipping completed question {qid}")
             continue
-        prompt = run.apply_chat_template(batch_texts[problem_id], model.config._name_or_path)
-        target = question[problem_id]
+        prompt = run.apply_chat_template(question["problem"], model.config._name_or_path)
+        target = question["answer"]
         print(f"Prompt: {prompt}")
         print(f"Target: {target}")
         probe="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
