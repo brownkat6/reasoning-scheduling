@@ -258,8 +258,8 @@ def main():
     parser.add_argument("--split", type=str, choices=['train', 'test'], help="Which split to process (required with --generate)")
     parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
-    parser.add_argument("--generate-X-data", type=bool, default=False, help="Generate X data")
-    parser.add_argument("--generate-Y-data", type=bool, default=False, help="Generate Y data")
+    parser.add_argument("--generate-X-data", type=str, default="False", choices=["True","False"], help="Generate X data")
+    parser.add_argument("--generate-Y-data", type=str, default="False", choices=["True","False"], help="Generate Y data")
     
     args = parser.parse_args()
     print("generate_X_data: ", args.generate_X_data)
@@ -276,10 +276,10 @@ def main():
         parser.error("--batch_idx is required when using --generate")
     if args.split is None:
         parser.error("--split is required when using --generate")
-    if args.generate_X_data:
+    if args.generate_X_data=="True":
         print(f"Generating X data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
         generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, dataset=args.dataset, S=args.S)
-    if args.generate_Y_data:
+    if args.generate_Y_data=="True":
         print(f"Generating Y data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
         generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S)
 
