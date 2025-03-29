@@ -275,8 +275,10 @@ def main():
     if args.split is None:
         parser.error("--split is required when using --generate")
     if args.generate_X_data:
+        print(f"Generating X data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
         generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, dataset=args.dataset, S=args.S)
     if args.generate_Y_data:
+        print(f"Generating Y data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
         generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S)
 
 
