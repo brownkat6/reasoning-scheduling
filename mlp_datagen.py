@@ -61,7 +61,7 @@ def get_model_and_tokenizer():
     model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
-        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, use_flash_attention_2=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
+        model = AutoModelForCausalLM.from_pretrained(model_name, output_hidden_states=True, cache_dir="/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers")
         model.eval()
         model.gradient_checkpointing_enable()
     except Exception as e:
@@ -170,6 +170,9 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     This script is VERY expensive to run because it requires generating 100 reasoning traces for each question,
     and for each reasoning trace, probing the model with the probe string and extracting an answer every W tokens.
     '''
+    # move model to half-point precision to avoid OOM-ing
+    model = model.half()  # Converts all floating point parameters to float16
+    
     questions = load_dynasor_dataset(dataset, split=split)
     print(f"Loaded {len(questions)} total questions")
     # Calculate batch bounds
