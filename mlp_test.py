@@ -454,6 +454,8 @@ def generate_data_old(batch_idx, split='train', num_traces=100, W=16, S=256, out
         try:
             print(f"Loading existing results from {output_csv}")
             existing_df = pd.read_csv(output_csv)
+            print(existing_df.shape)
+            print(existing_df.columns)
             # Count number of traces per question
             trace_counts = existing_df.groupby('question_id').size()
             # Get questions with all traces completed
