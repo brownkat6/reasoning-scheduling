@@ -83,6 +83,8 @@ def load_dataset(dataset_name):
         return load_jsonl("./data/aime24/test.jsonl")
     elif dataset_name == "math500":
         return load_jsonl("./data/math500/test.jsonl")
+    elif dataset_name == "gsm8k":
+        return load_jsonl("./data/gsm8k/test.jsonl")
     else:
         raise ValueError(f"Invalid dataset: {dataset_name}")
 
