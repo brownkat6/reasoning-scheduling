@@ -279,7 +279,7 @@ def format_deepseek_prompt(user_message: str) -> str:
 
 def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
     questions = load_dynasor_dataset(dataset)
-    print(f"Loaded {len(questions)} questions")
+    print(f"Loaded {len(questions)} total questions")
     # Calculate batch bounds
     start_idx = batch_idx * batch_size
     end_idx = min((batch_idx + 1) * batch_size, len(questions))
@@ -289,6 +289,7 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
     
     # Get questions for this batch
     questions = questions[start_idx:end_idx]
+    print(f"Loaded {len(questions)} batch questions")
     completed_question_ids = set()
     all_data = []
     if os.path.exists(output_csv):
