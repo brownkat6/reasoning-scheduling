@@ -235,7 +235,8 @@ def main():
         oracle_data = pd.read_csv(oracle_file)
         print(oracle_data.shape)
         print(oracle_data.columns)
-        oracle_data = oracle_data[oracle_data['question_id'].isin(range(args.start,args.end))].drop_duplicates(subset=['question_id'])
+        oracle_data = oracle_data[oracle_data['question_id'].isin(range(args.start,args.end))].drop_duplicates(subset=['question_id']).sort_values(by='question_id')
+        print(f"Question_ids: {oracle_data['question_id'].tolist()}")
         print(oracle_data.shape)
         # Convert string representation of lists to actual lists
         oracle_data['early_stop_correct_proportions'] = oracle_data['early_stop_correct_proportions'].apply(ast.literal_eval)
