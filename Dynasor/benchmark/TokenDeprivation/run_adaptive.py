@@ -297,7 +297,7 @@ def main():
             # Get appropriate prediction based on mode
             predicted_score = predictions[i][window_index] if window_index < len(predictions[i]) else 0.0
             
-            proportion_correct =execute_question_reuse(
+            proportion_correct,stats =execute_question_reuse(
                 model,
                 prompt,
                 target,
