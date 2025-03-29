@@ -2,15 +2,17 @@ import argparse
 from tqdm import tqdm
 try:
     from utils import save_json, load_dataset, set_seed
+    from clients import vllmClientModel, apply_chat_template
 except:
     from Dynasor.benchmark.TokenDeprivation.utils import save_json, load_dataset, set_seed
+    from Dynasor.benchmark.TokenDeprivation.clients import vllmClientModel, apply_chat_template
 from dynasor.core.evaluator import (
     extract_answer,
     strip_string,
     math_equal,
     extract_first_boxed_answer,
 )
-from clients import vllmClientModel, apply_chat_template
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import os
