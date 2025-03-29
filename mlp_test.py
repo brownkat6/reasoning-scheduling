@@ -301,7 +301,8 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
 
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
-    batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in questions if q['question_id'] not in completed_question_ids]
+    print(questions[0].keys())
+    batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in questions if q['id'] not in completed_question_ids]
     if not batch_texts:  # Skip if all questions are completed
         print("All questions in batch already completed")
         return
