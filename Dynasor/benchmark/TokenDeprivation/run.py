@@ -106,7 +106,7 @@ def load_model_and_tokenizer(model_name, cache_dir=None):
     return model, tokenizer
 
 
-def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p, temperature, is_actives=None, batch_size=4):
+def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p, temperature, is_actives=None, batch_size=16):
     """Helper function to generate batch responses for local (non-vllm) models.
     
     Args:
@@ -144,6 +144,8 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
         ).to(device)
         
         torch.cuda.empty_cache()
+        import gc
+        gc.collect()
         with torch.inference_mode():
             print(f"Generating batch of {len(batch_prompts)} prompts with shape {inputs.input_ids.shape} with {max_new_tokens} tokens")
             outputs = model.generate(
