@@ -209,7 +209,7 @@ def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     # Move model to GPU once
     model = model.to('cuda')
     # move model to half-point precision to avoid OOM-ing
-    model = model.half()  # Converts all floating point parameters to float16
+    # model = model.half()  # Converts all floating point parameters to float16
 
     print(f"Starting data generation for batch {batch_idx} of split {split}...")
     for problem_id, question in enumerate(questions):
