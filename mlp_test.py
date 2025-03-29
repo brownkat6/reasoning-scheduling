@@ -285,10 +285,12 @@ def generate_data(batch_idx, split='train', num_traces=100, W=16, S=256, output_
         try:
             print(f"Loading existing results from {output_csv}")
             existing_df = pd.read_csv(output_csv)
+            print(existing_df.shape)
+            print(existing_df.columns)
             # Count number of traces per question
             trace_counts = existing_df.groupby('question_id').size()
             # Get questions with all traces completed
-            completed_question_ids = set(trace_counts[trace_counts >= num_traces].index)
+            completed_question_ids = set(trace_counts[trace_counts >= 1].index)
             all_data = existing_df.to_dict('records')
             print(f"Found {len(completed_question_ids)} completed questions")
         except Exception as e:
