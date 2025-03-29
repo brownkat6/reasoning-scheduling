@@ -335,8 +335,6 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     plt.plot(nonadaptive_tokens, nonadaptive_accuracies, 'r-', marker='s', label='Non-adaptive')
     
     if oracle_dir:
-        print("Oracle tokens: ", oracle_tokens)
-        print("Oracle accuracies: ", oracle_accuracies)
         oracle_tokens, oracle_accuracies = zip(*sorted(zip(oracle_tokens, oracle_accuracies)))
         # plt.plot(oracle_tokens, oracle_accuracies, 'g-', marker='^', label='Oracle')
         # NOTE: for "Oracle" line, plot ground truth recorded prediction proportions rather than 10 new sampled reasoning traces proportion
