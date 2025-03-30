@@ -296,9 +296,9 @@ def get_directory_paths(dataset, model, split, start, end):
     oracle_file = f"oracle_{model}_{dataset}_mlp{dataset}_{split}_{start}_{end}"
     
     # Construct full paths
-    adaptive_dir = os.path.join(base_dir, "adaptive", adaptive_file)
-    non_adaptive_dir = os.path.join(base_dir, "baseline", non_adaptive_file)
-    oracle_dir = os.path.join(base_dir, "adaptive_oracle", oracle_file)
+    adaptive_dir = os.path.join(base_dir,  adaptive_file)
+    non_adaptive_dir = os.path.join(base_dir,  non_adaptive_file)
+    oracle_dir = os.path.join(base_dir,  oracle_file)
     
     return adaptive_dir, non_adaptive_dir, oracle_dir
 
