@@ -46,58 +46,55 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
     train_dataset_name=train_dataset
     test_dataset_name=test_dataset
     
-    # Define grouped file paths
-    train_grouped_file = os.path.join(train_data_dir, f"{train_dataset}_results_{train_split}_grouped.csv")
-    test_grouped_file = os.path.join(test_data_dir, f"{test_dataset}_results_{test_split}_grouped.csv")
+    def load_and_merge_data(data_dir, dataset, split):
+        # Check if grouped file already exists
+        grouped_file = f"{data_dir}/{dataset}_grouped_{split}.csv"
+        if os.path.exists(grouped_file):
+            return pd.read_csv(grouped_file)
+            
+        # If not, load and merge X and Y files
+        all_merged_data = []
+        batch_idx = 0
+        while True:
+            x_file = f"{data_dir}/{dataset}_X_{split}_{batch_idx}.csv"
+            y_file = f"{data_dir}/{dataset}_Y_{split}_{batch_idx}.csv"
+            
+            # Break if we've processed all batches
+            if not (os.path.exists(x_file) and os.path.exists(y_file)):
+                break
+                
+            # Load X and Y data
+            x_data = pd.read_csv(x_file)
+            y_data = pd.read_csv(y_file)
+            
+            # Merge on common keys
+            merged_data = pd.merge(
+                x_data, 
+                y_data,
+                on=['question_id', 'dataset', 'split'],
+                how='inner'
+            )
+            
+            all_merged_data.append(merged_data)
+            batch_idx += 1
+            
+        if not all_merged_data:
+            raise ValueError(f"No data files found in {data_dir} for {dataset} {split}")
+            
+        # Concatenate all batches
+        final_data = pd.concat(all_merged_data, ignore_index=True)
+        
+        # Save grouped data
+        final_data.to_csv(grouped_file, index=False)
+        
+        return final_data
     
-    # Process training data if grouped file doesn't exist
-    if not os.path.exists(train_grouped_file):
-        print("Loading and combining training data files...")
-        train_files = [os.path.join(train_data_dir, f"{train_dataset}_results_{train_split}_{i}.csv") for i in range(100)]
-        train_files = [f for f in train_files if os.path.exists(f)]
-        
-        if not train_files:
-            raise ValueError(f"No training data files found in {train_data_dir}")
-        
-        train_grouped_dfs = []
-        for f in train_files:
-            try:
-                df = pd.read_csv(f)
-                grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
-                train_grouped_dfs.append(grouped)
-            except Exception as e:
-                print(f"Error loading {f}: {e}")
-        train_grouped = pd.concat(train_grouped_dfs, ignore_index=True)
-        train_grouped.to_csv(train_grouped_file, index=False)
-        print(f"Saved grouped training data with {len(train_grouped)} questions")
-    else:
-        print("Loading pre-grouped training data...")
-        train_grouped = pd.read_csv(train_grouped_file)
+    # Load and merge training data
+    train_data = load_and_merge_data(train_data_dir, train_dataset, train_split)
     
-    # Process test data if grouped file doesn't exist
-    if not os.path.exists(test_grouped_file):
-        print("Loading and combining test data files...")
-        test_files = [os.path.join(test_data_dir, f"{test_dataset}_results_{test_split}_{i}.csv") for i in range(100)]
-        test_files = [f for f in test_files if os.path.exists(f)]
-        
-        if not test_files:
-            raise ValueError(f"No test data files found in {test_data_dir}")
-        
-        test_grouped_dfs = []
-        for f in test_files:
-            try:
-                df = pd.read_csv(f)
-                grouped = df.groupby(['question_id', 'split', 'question_text']).first().reset_index()
-                test_grouped_dfs.append(grouped)
-            except Exception as e:
-                print(f"Error loading {f}: {e}")
-        test_grouped = pd.concat(test_grouped_dfs, ignore_index=True)
-        test_grouped.to_csv(test_grouped_file, index=False)
-        print(f"Saved grouped test data with {len(test_grouped)} questions")
-    else:
-        print("Loading pre-grouped test data...")
-        test_grouped = pd.read_csv(test_grouped_file)
-
+    # Load and merge test data
+    test_data = load_and_merge_data(test_data_dir, test_dataset, test_split)
+    
     # Parse lists from string representation
     import ast
     def parse_list(x):
@@ -106,18 +103,18 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
         except Exception:
             return x
 
-    train_grouped['hidden_state'] = train_grouped['hidden_state'].apply(parse_list)
-    train_grouped['early_stop_correct_proportions'] = train_grouped['early_stop_correct_proportions'].apply(parse_list)
-    test_grouped['hidden_state'] = test_grouped['hidden_state'].apply(parse_list)
-    test_grouped['early_stop_correct_proportions'] = test_grouped['early_stop_correct_proportions'].apply(parse_list)
+    train_data['hidden_state'] = train_data['hidden_state'].apply(parse_list)
+    train_data['early_stop_correct_proportions'] = train_data['early_stop_correct_proportions'].apply(parse_list)
+    test_data['hidden_state'] = test_data['hidden_state'].apply(parse_list)
+    test_data['early_stop_correct_proportions'] = test_data['early_stop_correct_proportions'].apply(parse_list)
 
     # Prepare training data
-    X_train = np.vstack(train_grouped[X_key].values)
-    Y_train = np.vstack(train_grouped['early_stop_correct_proportions'].values)
+    X_train = np.vstack(train_data[X_key].values)
+    Y_train = np.vstack(train_data['early_stop_correct_proportions'].values)
     
     # Prepare test data
-    X_test = np.vstack(test_grouped[X_key].values)
-    Y_test = np.vstack(test_grouped['early_stop_correct_proportions'].values)
+    X_test = np.vstack(test_data[X_key].values)
+    Y_test = np.vstack(test_data['early_stop_correct_proportions'].values)
 
     print(f"Training questions: {X_train.shape[0]}, Testing questions: {X_test.shape[0]}")
 
@@ -428,6 +425,8 @@ def main():
     parser.add_argument("--X-key", type=str, default='hidden_state', choices=['hidden_state'], help="Key to use for input to MLP")
     
     args = parser.parse_args()
+    
+    # TODO: refactor this script to load in the new X and Y csvs instead of the old aggregate csvs
     
     STEM="/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling_new/"
     train_data_dir = STEM+args.train_data_dir
