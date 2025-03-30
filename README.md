@@ -1,5 +1,7 @@
 # reasoning-scheduling
 
+### Brief current file directory
+
 `gen_datasets.py` - pulls data from huggingface and saves it in the Dyanor data directory. Run once and never again for each of the datasets we want to add.
 
 `mlp_datagen.py` - generates X,y for our prediction task. E.g. y is the early stopping probabilities of generating the correct answer if we terminate after W, 2W, .... tokens. X is the predictors we want to use, e.g. the hidden states and potentially other data. This script generates X and y for given datasets and saves it to netscratch.
