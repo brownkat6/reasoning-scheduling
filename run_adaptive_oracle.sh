@@ -22,6 +22,9 @@ mkdir -p "${OUTPUT_DIR}"
 # Run the token deprivation experiment
 set -x
 
+# Set default value for end
+END=${1:-100}
+
 # Run the adaptive token deprivation experiment
 /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u Dynasor/benchmark/TokenDeprivation/run_adaptive.py \
     --dataset gsm8k \
@@ -35,7 +38,7 @@ set -x
     --top-p 0.95 \
     --probe-tokens 32 \
     --start 0 \
-    --end 100 \
+    --end $END \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     --use-oracle \
     "$@"

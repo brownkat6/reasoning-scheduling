@@ -17,6 +17,9 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 OUTPUT_DIR="${SCRIPT_DIR}/../benchmark-output"
 mkdir -p "${OUTPUT_DIR}"
 
+# Set default value for end
+END=${1:-100}
+
 # Run the token deprivation experiment
 set -x
 /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "Dynasor/benchmark/TokenDeprivation/run.py" \
@@ -25,7 +28,7 @@ set -x
     --step 32 \
     --max-tokens 256 \
     --start 0 \
-    --end 100 \
+    --end $END \
     --probe-tokens 32 \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"

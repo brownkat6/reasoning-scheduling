@@ -2,9 +2,9 @@
 
 ### Brief current file directory
 
-`gen_datasets.py` - pulls data from huggingface and saves it in the Dyanor data directory. Run once and never again for each of the datasets we want to add.
+`gen_datasets.py` - pulls data from huggingface and saves it in the Dynasor data directory. Run once and never again for each of the datasets we want to add.
 
-`mlp_datagen.py` - generates X,y for our prediction task. E.g. y is the early stopping probabilities of generating the correct answer if we terminate after W, 2W, .... tokens. X is the predictors we want to use, e.g. the hidden states and potentially other data. This script generates X and y for given datasets and saves it to netscratch.
+`mlp_datagen.py` - generates X, y for our prediction task. E.g. y is the early stopping probabilities of generating the correct answer if we terminate after W, 2W, .... tokens. X is the predictors we want to use, e.g. the hidden states and potentially other data. This script generates X and y for given datasets and saves it to netscratch.
 
 `generate_data.sh` - sbatch script that batches out the data generation jobs with mlp_datagen.py`
 
@@ -21,3 +21,5 @@
 `run_adaptive_oracle.sh` - runs benchmark tokens vs accuracy experiment for adaptive allocation strategy using oracle ground truth for early stopping correctness probabilities (using the same data used to train the MLP)
 
 `vis_adaptive.py` - creates visualization for tokens vs accuracy experiment for non-adaptive vs adaptive vs oracle
+
+NOTE: most of dynasor vllm server scheduling layer is in `Dynasor.dynasor.cli/*`. Read and understand this. We will likely want to adapt/reuse large portions of this code later to write our own scheduling layer. 

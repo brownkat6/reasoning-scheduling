@@ -286,7 +286,24 @@ def create_prediction_scatter(adaptive_predictions, oracle_predictions=None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plt.savefig(f'figures/prediction_scatter.png', dpi=300, bbox_inches='tight')
 
-def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
+def get_directory_paths(dataset, model, split, start, end):
+    """Construct directory paths based on input parameters"""
+    base_dir = f"data/{dataset}_results"
+    
+    # Construct file names based on the pattern
+    adaptive_file = f"adaptive_{model}_{dataset}_mlp{dataset}_{split}_{start}_{end}"
+    non_adaptive_file = f"{model}_{dataset}_step32_max256_trials10_{start}_{end}"
+    oracle_file = f"oracle_{model}_{dataset}_mlp{dataset}_{split}_{start}_{end}"
+    
+    # Construct full paths
+    adaptive_dir = os.path.join(base_dir, "adaptive", adaptive_file)
+    non_adaptive_dir = os.path.join(base_dir, "baseline", non_adaptive_file)
+    oracle_dir = os.path.join(base_dir, "adaptive_oracle", oracle_file)
+    
+    return adaptive_dir, non_adaptive_dir, oracle_dir
+
+def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, split, start, end):
+    """Original plotting function with any existing plotting logic"""
     # Load adaptive results
     adaptive_tokens, adaptive_accuracies, adaptive_counts, adaptive_predictions = load_adaptive_results(adaptive_dir)
     print_prediction_analysis(adaptive_predictions, "Adaptive (Non-Oracle)")
@@ -314,7 +331,7 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     for t, a, c in zip(adaptive_tokens, adaptive_accuracies, adaptive_counts):
         print(f"{t:11d} | {a:7.2f}% | {c:9d}")
     
-    nonadaptive_tokens, nonadaptive_accuracies, nonadaptive_counts = load_results(nonadaptive_dir)
+    nonadaptive_tokens, nonadaptive_accuracies, nonadaptive_counts = load_results(non_adaptive_dir)
     print("\nNon-adaptive Results:")
     print("Token Budget | Accuracy | Questions")
     print("-" * 40)
@@ -383,15 +400,35 @@ def plot_results(adaptive_dir, nonadaptive_dir, oracle_dir=None):
     plt.show()
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, required=True)
-    parser.add_argument('--dataset', type=str, required=True)
-    parser.add_argument('--adaptive-dir', type=str, required=True)
-    parser.add_argument('--nonadaptive-dir', type=str, required=True)
-    parser.add_argument('--oracle-dir', type=str)
+    parser = argparse.ArgumentParser(description="Visualize adaptive and non-adaptive results")
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset name (e.g., gsm8k)")
+    parser.add_argument("--model", type=str, required=True, help="Model name (e.g., deepseek-ai-DeepSeek-R1-Distill-Qwen-1.5B)")
+    parser.add_argument("--split", type=str, required=True, help="Data split (e.g., train, test)")
+    parser.add_argument("--start", type=int, required=True, help="Start index")
+    parser.add_argument("--end", type=int, required=True, help="End index")
+    
     args = parser.parse_args()
     
-    plot_results(args.adaptive_dir, args.nonadaptive_dir, args.oracle_dir)
+    # Get directory paths based on arguments
+    adaptive_dir, non_adaptive_dir, oracle_dir = get_directory_paths(
+        args.dataset,
+        args.model,
+        args.split,
+        args.start,
+        args.end
+    )
+    
+    # Call plotting function with all arguments
+    plot_results(
+        adaptive_dir,
+        non_adaptive_dir,
+        oracle_dir,
+        args.dataset,
+        args.model,
+        args.split,
+        args.start,
+        args.end
+    )
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main() 
