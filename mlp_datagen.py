@@ -48,7 +48,7 @@ def load_dynasor_dataset(dataset_name, split="test"):
     test_data = []
     for i, sample in enumerate(data):
         question = sample["problem"]
-        answer_field = sample["answer"]
+        answer_field = str(sample["answer"])
         ground_truth = answer_field.strip()
         test_data.append({"id": f"{split}_{i}", "problem": question, "answer": ground_truth})
     return test_data
