@@ -1,4 +1,4 @@
-# reasoning-scheduling
+# Predictive Scheduling for Efficient Inference-Time Reasoning in Large Language Models
 
 ### Brief current file directory
 
