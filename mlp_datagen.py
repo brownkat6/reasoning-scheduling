@@ -284,7 +284,7 @@ def main():
     parser = argparse.ArgumentParser(description="MLP test experiment for reasoning traces")
     parser.add_argument("--batch_idx", type=int, required=True, help="Batch index for data generation (required with --generate)")
     parser.add_argument("--split", type=str, choices=['train', 'test'], help="Which split to process (required with --generate)")
-    parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Which dataset to use")
+    parser.add_argument("--dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina', 'amc23', 'aime24', 'GPQADiamond'], help="Which dataset to use")
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
     parser.add_argument("--generate-X-data", type=str, default="False", choices=["True","False"], help="Generate X data")
     parser.add_argument("--generate-Y-data", type=str, default="False", choices=["True","False"], help="Generate Y data")
@@ -313,72 +313,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
-              test_data_dir='', test_split='test', test_dataset='gsm8k',
-              num_epochs=20, batch_size=4, learning_rate=1e-3,
-              X_key='hidden_state'):
-    """Train MLP model on the data"""
-    
-    # Define paths for grouped files
-    train_grouped_file = f"{train_data_dir}/{train_dataset}_grouped_{train_split}.csv"
-    test_grouped_file = f"{test_data_dir}/{test_dataset}_grouped_{test_split}.csv"
-    
-    # Function to merge X and Y data for a specific batch
-    def merge_batch_data(data_dir, dataset, split, batch_idx):
-        x_file = f"{data_dir}/{dataset}_X_{split}_{batch_idx}.csv"
-        y_file = f"{data_dir}/{dataset}_Y_{split}_{batch_idx}.csv"
-        
-        if not (os.path.exists(x_file) and os.path.exists(y_file)):
-            return None
-            
-        x_data = pd.read_csv(x_file)
-        y_data = pd.read_csv(y_file)
-        
-        # Merge on common keys
-        merged = pd.merge(x_data, y_data, 
-                         on=['question_id', 'dataset', 'split'],
-                         how='inner')
-        return merged
-    
-    # Function to create grouped file if it doesn't exist
-    def create_grouped_file(data_dir, dataset, split, output_file):
-        if os.path.exists(output_file):
-            return pd.read_csv(output_file)
-            
-        print(f"Creating grouped file for {dataset} {split} split...")
-        merged_batches = []
-        batch_idx = 0
-        
-        while True:
-            batch_data = merge_batch_data(data_dir, dataset, split, batch_idx)
-            if batch_data is None:
-                # No more batches found
-                break
-            merged_batches.append(batch_data)
-            batch_idx += 1
-            
-        if not merged_batches:
-            raise ValueError(f"No data found for {dataset} {split} split")
-            
-        # Concatenate all merged batches
-        all_data = pd.concat(merged_batches, ignore_index=True)
-        
-        # Save grouped file
-        all_data.to_csv(output_file, index=False)
-        return all_data
-    
-    # Load or create grouped files
-    train_data = create_grouped_file(train_data_dir, train_dataset, train_split, train_grouped_file)
-    test_data = create_grouped_file(test_data_dir, test_dataset, test_split, test_grouped_file)
-    
-    # Rest of the existing train_mlp function...
-    # Convert hidden states from string to numpy arrays
-    X_train = np.array([ast.literal_eval(x) for x in train_data[X_key]])
-    X_test = np.array([ast.literal_eval(x) for x in test_data[X_key]])
-    
-    # Convert early stopping proportions from string to numpy arrays
-    Y_train = np.array([ast.literal_eval(y) for y in train_data['early_stop_correct_proportions']])
-    Y_test = np.array([ast.literal_eval(y) for y in test_data['early_stop_correct_proportions']])
-    
-    # Continue with existing code...
