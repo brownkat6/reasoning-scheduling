@@ -417,6 +417,9 @@ def main():
         args.start,
         args.end
     )
+    print(f"Adaptive directory: {adaptive_dir}")
+    print(f"Non-adaptive directory: {non_adaptive_dir}")
+    print(f"Oracle directory: {oracle_dir}")
     
     # Call plotting function with all arguments
     plot_results(
