@@ -288,7 +288,7 @@ def create_prediction_scatter(adaptive_predictions, oracle_predictions=None):
 
 def get_directory_paths(dataset, model, split, start, end):
     """Construct directory paths based on input parameters"""
-    base_dir = f"data/{dataset}_results"
+    base_dir = f"results"
     
     # Construct file names based on the pattern
     adaptive_file = f"adaptive_{model}_{dataset}_mlp{dataset}_{split}_{start}_{end}"
