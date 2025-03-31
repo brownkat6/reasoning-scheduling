@@ -298,6 +298,9 @@ def main():
         actual_scores = []
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
+            print(f"Prompt: {prompt}")
+            # Print the predictions for this prompt
+            print(f"Predictions: {predictions[i]}")
             
             # Calculate window index for predictions
             window_index = max_tokens[i]//16 - 1
