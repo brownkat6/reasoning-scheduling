@@ -97,9 +97,11 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
         return final_data
     
     # Load and merge training data
+    print(f"Loading and merging training data from {train_data_dir} for {train_dataset} {train_split}")
     train_data = load_and_merge_data(train_data_dir, train_dataset, train_split)
     
     # Load and merge test data
+    print(f"Loading and merging test data from {test_data_dir} for {test_dataset} {test_split}")
     test_data = load_and_merge_data(test_data_dir, test_dataset, test_split)
     
     # Parse lists from string representation
