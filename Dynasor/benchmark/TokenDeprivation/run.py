@@ -149,7 +149,7 @@ def generate_batch_local_model(model, tokenizer, prompts, max_new_tokens, top_p,
         # print out the amount of free CUDA memory here
         # print(torch.cuda.memory_summary(device=device, abbreviated=False))
         with torch.inference_mode():
-            print(f"Generating batch of {len(batch_prompts)} prompts with shape {inputs.input_ids.shape} with {max_new_tokens} tokens")
+            # print(f"Generating batch of {len(batch_prompts)} prompts with shape {inputs.input_ids.shape} with {max_new_tokens} tokens")
             outputs = model.generate(
                 inputs.input_ids,
                 attention_mask=inputs.attention_mask,
@@ -205,8 +205,8 @@ def execute_question_reuse(
         device = next(model.parameters()).device
         if tokenizer is None:
             tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
-    print(len(max_tokens),max_tokens,"max tokens to execute")
-    print("Prompt:", prompt)
+    # print(len(max_tokens),max_tokens,"max tokens to execute")
+    print(f"Current prompts: {current_prompts[0]}")
     round_results_arr = []
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         torch.cuda.empty_cache()
@@ -313,7 +313,7 @@ def execute_question_reuse(
                 temperature=temperature,
                 is_actives=[not finished for finished in is_finished]
             )
-
+        print(f"Probe responses: {probe_responses}")
         round_results["probe_prompts"] = probe_prompts
         round_results["probe_responses"] = [
             response.choices[0].text if response else "" for response in probe_responses

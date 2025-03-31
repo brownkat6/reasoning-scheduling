@@ -49,7 +49,7 @@ def parse_args():
         default="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
         help="Name or path of the model to use"
     )
-    parser.add_argument("--probe", type=str, default="**Final Answer**\n\n\\[ \\boxed{")
+    parser.add_argument("--probe", type=str, default="... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{")
     parser.add_argument("--probe-tokens", type=int, default=10)
     parser.add_argument("--url", type=str, default="http://localhost:8000/v1")
     parser.add_argument("--api-key", type=str, default="token-abc123")
@@ -223,7 +223,7 @@ def main():
     # Process questions in range
     questions = data[args.start:args.end]
     prompts = [run.apply_chat_template(item["problem"], model.config._name_or_path) for item in questions]
-    targets = [strip_string(item["answer"]) for item in questions]
+    targets = [item["answer"] for item in questions]
 
     if args.use_oracle:
         # Load oracle data from grouped CSV
@@ -236,13 +236,13 @@ def main():
         import pandas as pd
         import ast
         oracle_data = pd.read_csv(oracle_file)
-        print(oracle_data.shape)
-        print(oracle_data.columns)
+        #print(oracle_data.shape)
+        #print(oracle_data.columns)
         oracle_data["question_id"] = oracle_data["question_id"].apply(lambda x: int(x.replace("test_","").replace("train_","")))
-        print(oracle_data["question_id"].unique())
+        #print(oracle_data["question_id"].unique())
         oracle_data = oracle_data[oracle_data["question_id"].isin(range(args.start,args.end))].drop_duplicates(subset=['question_id']).sort_values(by='question_id')
-        print(f"Question_ids: {oracle_data['question_id'].tolist()}")
-        print(oracle_data.shape)
+        #print(f"Question_ids: {oracle_data['question_id'].tolist()}")
+        #print(oracle_data.shape)
         # Convert string representation of lists to actual lists
         oracle_data['early_stop_correct_proportions'] = oracle_data['early_stop_correct_proportions'].apply(ast.literal_eval)
         predictions = np.array(oracle_data['early_stop_correct_proportions'].tolist())
@@ -323,6 +323,7 @@ def main():
                 tokenizer=tokenizer,
                 predicted_score=predicted_score  # Pass prediction to execute_question_reuse
             )
+            
             predicted_scores.append(predicted_score)
             actual_scores.append(proportion_correct)
 

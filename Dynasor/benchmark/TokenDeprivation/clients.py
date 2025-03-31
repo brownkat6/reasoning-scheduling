@@ -29,6 +29,8 @@ MODEL_TEMPLATES.update(
 
 def apply_chat_template(prompt, model_name):
     # Get the template function for the model, default to identity function
+    if "<｜Assistant｜>" in prompt:
+        return prompt # already formatted
     template_fn = MODEL_TEMPLATES.get(
         model_name, lambda p: "<｜User｜>" + p + "<｜Assistant｜>"
     )
