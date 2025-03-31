@@ -274,7 +274,7 @@ def main():
 
     # Process each token budget
     token_budgets = list(range(args.step, args.max_tokens + args.step, args.step))
-    print(token_budgets,"token budgets")
+    #print(token_budgets,"token budgets")
     for token_budget in token_budgets:
         print(f"\nProcessing token budget: {token_budget}")
         
@@ -299,9 +299,9 @@ def main():
         actual_scores = []
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
             print(f"Question {i+args.start}: allocated {max_tokens[i]} tokens")
-            print(f"Prompt: {prompt}")
+            #print(f"Prompt: {prompt}")
             # Print the predictions for this prompt
-            print(f"Predictions: {predictions[i]}")
+            #print(f"Predictions: {predictions[i]}")
             
             # Calculate window index for predictions
             window_index = max_tokens[i]//16 - 1

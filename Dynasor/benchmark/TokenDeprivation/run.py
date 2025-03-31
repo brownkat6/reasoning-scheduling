@@ -206,9 +206,9 @@ def execute_question_reuse(
         if tokenizer is None:
             tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
     # print(len(max_tokens),max_tokens,"max tokens to execute")
-    print(f"Current prompts: {current_prompts[0]}")
-    print(f"Target: {target}")
-    print(f"Probe: {probe}")
+    #print(f"Current prompts: {current_prompts[0]}")
+    #print(f"Target: {target}")
+    #print(f"Probe: {probe}")
     round_results_arr = []
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         torch.cuda.empty_cache()
@@ -349,13 +349,13 @@ def execute_question_reuse(
         # Calculate and print actual proportion
         actual_proportion = sum(is_corrects) / len(is_corrects)
         if predicted_score is not None:
-            print(f"Question {problem_id} - Token budget {max_tokens[i]}:")
+            # print(f"Question {problem_id} - Token budget {max_tokens[i]}:")
             print(f"  Predicted proportion correct: {predicted_score:.2f}")
             print(f"  Actual proportion correct:    {actual_proportion:.2f}")
 
         round_results["is_corrects"] = is_corrects
-        print(f"Is corrects: {is_corrects}")
-        print(f"Extracted answers: {extracted_answers}")
+        #print(f"Is corrects: {is_corrects}")
+        #print(f"Extracted answers: {extracted_answers}")
         round_results["extracted_answers"] = extracted_answers
         round_results["is_corrects_original"] = is_corrects_original
         round_results_arr.append(round_results)
@@ -397,9 +397,9 @@ def main():
         prompt = item["problem"].strip()
         target = strip_string(item["answer"])
 
-        print(f"Executing question {problem_id} with target [{target}]")
-        print(f"Prompt: {prompt}")
-        print("-" * 100)
+        #print(f"Executing question {problem_id} with target [{target}]")
+        #print(f"Prompt: {prompt}")
+        #print("-" * 100)
         token_budgets = list(range(args.step, args.max_tokens + args.step, args.step))
         batch_results, stats = execute_question_reuse(
             model,
