@@ -356,6 +356,7 @@ def execute_question_reuse(
         round_results["is_corrects"] = is_corrects
         print(f"Is corrects: {is_corrects}")
         print(f"Extracted answers: {extracted_answers}")
+        round_results["extracted_answers"] = extracted_answers
         round_results["is_corrects_original"] = is_corrects_original
         round_results_arr.append(round_results)
 
