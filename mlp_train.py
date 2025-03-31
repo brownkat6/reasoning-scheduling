@@ -86,6 +86,7 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
         final_data = pd.concat(all_merged_data, ignore_index=True)
         
         # Save grouped data
+        print(f"Saving grouped data to {grouped_file} with shape {final_data.shape} and columns {final_data.columns}")
         final_data.to_csv(grouped_file, index=False)
         
         return final_data
