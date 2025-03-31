@@ -90,6 +90,7 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     print(f"Loaded {len(questions)} batch questions")
     completed_question_ids = set()
     all_data = []
+    '''
     if os.path.exists(output_csv):
         try:
             print(f"Loading existing results from {output_csv}")
@@ -102,7 +103,7 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
             print(f"Found {len(completed_question_ids)} completed questions")
         except Exception as e:
             print(f"Error loading existing results from {output_csv}: {e}")
-    
+    '''
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
     # Move model to GPU once
@@ -110,7 +111,6 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
 
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
-    print(questions[0].keys())
     batch_texts = [run.apply_chat_template(q["problem"], model.config._name_or_path) for q in questions if q['id'] not in completed_question_ids]
     if not batch_texts:  # Skip if all questions are completed
         print("All questions in batch already completed")
@@ -143,17 +143,24 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     
     # Create mapping from question to its hidden state
     hidden_states_map = {}
+    batch_texts_map = {}
     current_idx = 0
     for q in questions:
         if q['id'] not in completed_question_ids:
             hidden_states_map[q['id']] = batch_hidden_states[current_idx]
+            batch_texts_map[q['id']] = batch_texts[current_idx]
             current_idx += 1
     
+    # Create map from qid as in the hidden_states_map keys to the corresponding batch_texts[i] entry
+    
+    
+    
     # Create the dataframe data
-    for qid, hidden_state in hidden_states_map.items():
+    for i,(qid, hidden_state) in enumerate(hidden_states_map.items()):
         all_data.append({
                 "dataset": dataset,
                 "question_id": qid,
+                "question_text": batch_texts_map[qid],
                 "split": split,
                 "hidden_state": hidden_state.cpu().numpy().tolist(),  # Only convert to CPU/numpy when storing
                 # TODO: add other predictors here! 
