@@ -313,11 +313,12 @@ def execute_question_reuse(
                 temperature=temperature,
                 is_actives=[not finished for finished in is_finished]
             )
-        print(f"Probe responses: {probe_responses}")
+        
         round_results["probe_prompts"] = probe_prompts
         round_results["probe_responses"] = [
             response.choices[0].text if response else "" for response in probe_responses
         ]
+        print(f"Probe responses:",round_results["probe_responses"])
 
         is_corrects = []
         is_corrects_original = []
