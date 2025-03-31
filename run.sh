@@ -30,6 +30,7 @@ set -x
     --start 0 \
     --end $END \
     --probe-tokens 32 \
+    --split train \
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{" \
     "$@"
 set +x

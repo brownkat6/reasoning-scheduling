@@ -83,7 +83,7 @@ def parse_args():
     )
     parser.add_argument("--top-p", type=float, default=0.95, help="Top p for sampling")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-
+    parser.add_argument("--split", type=str, default="train", choices=["train", "test"], help="Split to use")
     return parser.parse_args()
 
 
@@ -371,7 +371,7 @@ def execute_question_reuse(
 def main():
     args = parse_args()
     set_seed(args.seed)
-    data = load_dataset(args.dataset)
+    data = load_dataset(args.dataset, args.split)
     cache_dir = "/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers"
 
     # Create output directory
