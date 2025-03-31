@@ -162,6 +162,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
         allocations[best_query] += W
         remaining_budget -= W
     #print(remaining_budget,"remaining budget after allocating additional tokens")
+    # TODO: look at Janet test_0 example the loaded predictions don't match???
     
     i=0
     while remaining_budget >= W:
@@ -205,7 +206,7 @@ def main():
     # Instead of using args.seed, we set fixed seeds for all processes
     set_deterministic_mode()
     
-    data = load_dataset(args.dataset)
+    data = load_dataset(args.dataset,split=args.mlp_train_split)
     cache_dir = "/n/holylabs/LABS/dwork_lab/Everyone/cache/transformers"
 
     # Setup output directory
