@@ -320,10 +320,7 @@ def execute_question_reuse(
         round_results["probe_responses"] = [
             response.choices[0].text if response else "" for response in probe_responses
         ]
-        print(f"Probe responses:",len(round_results["probe_responses"]))
-        for i in range(len(round_results["probe_responses"])):
-            print(f"Probe response {i}: {round_results['probe_responses'][i]}")
-
+        extracted_answers = []
         is_corrects = []
         is_corrects_original = []
         for trial in range(num_trials):
@@ -332,13 +329,14 @@ def execute_question_reuse(
                     current_prompts[trial] + completions[trial][0], "aime24"
                 )
                 is_corrects.append(math_equal(finished_result, target))
+                extracted_answers.append(finished_result)
             else:
                 probe_result = extract_first_boxed_answer(
                         probe_prompts[trial] + probe_responses[trial].choices[0].text,
                         "aime24",
                 )
                 is_corrects.append(math_equal(probe_result, target))
-
+                extracted_answers.append(probe_result)
             is_corrects_original.append(
                 math_equal(
                     extract_answer(
@@ -357,6 +355,7 @@ def execute_question_reuse(
 
         round_results["is_corrects"] = is_corrects
         print(f"Is corrects: {is_corrects}")
+        print(f"Extracted answers: {extracted_answers}")
         round_results["is_corrects_original"] = is_corrects_original
         round_results_arr.append(round_results)
 
