@@ -74,6 +74,7 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
                 on=['question_id', 'dataset', 'split'],
                 how='inner'
             )
+            merged_data["batch_idx"] = batch_idx
             
             all_merged_data.append(merged_data)
             batch_idx += 1
