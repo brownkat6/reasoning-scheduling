@@ -131,7 +131,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
     
     # Calculate how many more tokens we can allocate
     remaining_budget = token_budget * num_queries - np.sum(allocations)
-    print(remaining_budget,"remaining budget")
+    #print(remaining_budget,"remaining budget")
     while remaining_budget >= W:
         # For each query, calculate potential gain from adding W tokens
         best_gain=-1
@@ -161,7 +161,7 @@ def optimize_token_allocation(predictions, token_budget, W=16):
         # Allocate W more tokens to the best query
         allocations[best_query] += W
         remaining_budget -= W
-    print(remaining_budget,"remaining budget after allocating additional tokens")
+    #print(remaining_budget,"remaining budget after allocating additional tokens")
     
     i=0
     while remaining_budget >= W:
@@ -172,8 +172,8 @@ def optimize_token_allocation(predictions, token_budget, W=16):
             allocations[i % (num_queries)] += W
             remaining_budget -= W
         i+=1
-    print(remaining_budget,"remaining budget after distributing additional tokens")
-    print(f"Allocation counts: {Counter(allocations)}")
+    #print(remaining_budget,"remaining budget after distributing additional tokens")
+    #print(f"Allocation counts: {Counter(allocations)}")
     
     # print what the expected reward under prediction are under allocation, and compare it to the expected reward if all queries
     # were allocated token_budget uniformly
