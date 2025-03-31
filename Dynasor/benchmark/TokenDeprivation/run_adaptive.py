@@ -218,6 +218,8 @@ def main():
         output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}_{args.start}_{args.end}"
     os.makedirs(output_dir, exist_ok=True)
 
+    model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
+    
     # Process questions in range
     questions = data[args.start:args.end]
     prompts = [run.apply_chat_template(item["problem"], model.config._name_or_path) for item in questions]
@@ -263,9 +265,6 @@ def main():
             ).cuda()
             mlp_model.load_state_dict({k: v.cuda() for k, v in checkpoint['model_state_dict'].items()})
         mlp_model.eval()
-
-        # Get model and tokenizer for hidden states
-        model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
         
         # Get hidden states and predictions
         hidden_states = get_hidden_states(model, tokenizer, prompts)
@@ -295,7 +294,6 @@ def main():
         # print(f"Allocation: {max_tokens}")
         
         # Execute questions with optimized token allocations
-        model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
         predicted_scores = []
         actual_scores = []
         for i, (prompt, target) in enumerate(zip(prompts, targets)):
