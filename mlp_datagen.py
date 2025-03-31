@@ -151,10 +151,6 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
             batch_texts_map[q['id']] = batch_texts[current_idx]
             current_idx += 1
     
-    # Create map from qid as in the hidden_states_map keys to the corresponding batch_texts[i] entry
-    
-    
-    
     # Create the dataframe data
     for i,(qid, hidden_state) in enumerate(hidden_states_map.items()):
         all_data.append({

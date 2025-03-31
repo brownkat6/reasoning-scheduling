@@ -74,6 +74,10 @@ def train_mlp(train_data_dir='', train_split='train', train_dataset='gsm8k',
                 on=['question_id', 'dataset', 'split'],
                 how='inner'
             )
+            if 'question_text_x' in merged_data.columns and 'question_text_y' in merged_data.columns:
+                assert (merged_data['question_text_x'] == merged_data['question_text_y']).all()
+                merged_data.drop(columns=['question_text_x', 'question_text_y'], inplace=True)
+                print(f"In batch {batch_idx}, found question_text_x and question_text_y to be identical")
             merged_data["batch_idx"] = batch_idx
             
             all_merged_data.append(merged_data)
