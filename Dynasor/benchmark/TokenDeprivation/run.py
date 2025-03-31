@@ -320,7 +320,7 @@ def execute_question_reuse(
         round_results["probe_responses"] = [
             response.choices[0].text if response else "" for response in probe_responses
         ]
-        print(f"Probe responses:",round_results["probe_responses"])
+        print(f"Probe responses:",len(round_results["probe_responses"]),round_results["probe_responses"])
 
         is_corrects = []
         is_corrects_original = []
@@ -354,6 +354,7 @@ def execute_question_reuse(
             print(f"  Actual proportion correct:    {actual_proportion:.2f}")
 
         round_results["is_corrects"] = is_corrects
+        print(f"Is corrects: {is_corrects}")
         round_results["is_corrects_original"] = is_corrects_original
         round_results_arr.append(round_results)
 
