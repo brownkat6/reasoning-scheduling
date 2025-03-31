@@ -17,6 +17,7 @@ from datetime import datetime
 import random
 from collections import Counter
 from mlp import MLP
+import run
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Adaptive Token Deprivation Experiment")
@@ -219,7 +220,7 @@ def main():
 
     # Process questions in range
     questions = data[args.start:args.end]
-    prompts = [item["problem"].strip() for item in questions]
+    prompts = [run.apply_chat_template(item["problem"], model.config._name_or_path) for item in questions]
     targets = [strip_string(item["answer"]) for item in questions]
 
     if args.use_oracle:
