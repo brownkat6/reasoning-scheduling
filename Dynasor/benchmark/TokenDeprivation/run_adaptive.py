@@ -226,7 +226,7 @@ def main():
         # Load oracle data from grouped CSV
         # STEM = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling/"
         STEM = "/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling_new/"
-        oracle_file = f"{STEM}data/{args.dataset}_results/{args.dataset}_results_{args.mlp_train_split}_grouped.csv"
+        oracle_file = f"{STEM}data/{args.dataset}_results/{args.dataset}_grouped_{args.mlp_train_split}.csv"#{args.dataset}_results_{args.mlp_train_split}_grouped.csv"
         if not os.path.exists(oracle_file):
             raise ValueError(f"Oracle data not found at {oracle_file}")
         
