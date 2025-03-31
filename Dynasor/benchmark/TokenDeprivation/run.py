@@ -320,7 +320,9 @@ def execute_question_reuse(
         round_results["probe_responses"] = [
             response.choices[0].text if response else "" for response in probe_responses
         ]
-        print(f"Probe responses:",len(round_results["probe_responses"]),round_results["probe_responses"])
+        print(f"Probe responses:",len(round_results["probe_responses"]))
+        for i in range(len(round_results["probe_responses"])):
+            print(f"Probe response {i}: {round_results['probe_responses'][i]}")
 
         is_corrects = []
         is_corrects_original = []
