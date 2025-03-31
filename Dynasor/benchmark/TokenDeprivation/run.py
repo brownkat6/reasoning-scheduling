@@ -206,6 +206,7 @@ def execute_question_reuse(
         if tokenizer is None:
             tokenizer = model.tokenizer if hasattr(model, 'tokenizer') else model.config.tokenizer
     print(len(max_tokens),max_tokens,"max tokens to execute")
+    print("Prompt:", prompt)
     round_results_arr = []
     for i in tqdm(range(len(max_tokens)), desc="Executing questions"):
         torch.cuda.empty_cache()
