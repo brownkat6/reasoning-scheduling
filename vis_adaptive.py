@@ -360,9 +360,9 @@ def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, spl
         for token_budget in oracle_tokens:
             predicted_accuracies.append(100.0*np.mean([float(oracle_predictions[token_budget][qid]['predicted']) for qid in oracle_predictions[token_budget]]))
         print("Oracle predicted accuracies: ", predicted_accuracies)
-        # plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle')
+        plt.plot(oracle_tokens, predicted_accuracies, 'g-', marker='^', label='Oracle Predicted')
         # plots actual accuracies from 10 resampled reasoning traces
-        plt.plot(oracle_tokens, oracle_accuracies, 'p-', label='Oracle', marker='o')
+        plt.plot(oracle_tokens, oracle_accuracies, 'p-', label='Oracle Actual', marker='o')
         
     plt.xlabel('Token Budget')
     plt.ylabel('Average Accuracy (%)')
@@ -375,7 +375,7 @@ def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, spl
     
     # Save plot with timestamp
     # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plot_path = f'figures/accuracy_comparison.png'
+    plot_path = f'figures/accuracy_comparison_{end}.png'
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"\nPlot saved to: {plot_path}")
     
