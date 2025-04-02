@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=reasoning_schedule_sweep # Job name
 #SBATCH --partition=seas_gpu
-#SBATCH --account=hankyang_lab # Account to charge for GPU usage
+##SBATCH --account=hankyang_lab # Account to charge for GPU usage
 #SBATCH --output=logs/reasoning_schedule_sweep_%A_%a.out # Standard output and error log
 #SBATCH --error=logs/reasoning_schedule_sweep_%A_%a.err # Standard error file
-#SBATCH --array=0-91 # 60 jobs total
+##SBATCH --array=0-91 # 60 jobs total
 #SBATCH --time=0:05:00 # Time limit
 #SBATCH --nodes=1 # Number of nodes
 #SBATCH --ntasks=1 # Number of tasks
