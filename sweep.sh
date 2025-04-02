@@ -20,10 +20,12 @@ SWEEP_ID="fh3odiup"
 if [ "$USER" == "katrinabrown" ]; then
     cd /n/home11/katrinabrown/thesis/reasoning-scheduling
     PYTHON="/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python"
+    SWEEP_ID="iyov702h"
 else
     cd /n/home04/amuppidi/reasoning-scheduling
     PYTHON="~/.conda/envs/torch/bin/python"
 fi
+echo "Running with SWEEP_ID: $SWEEP_ID"
 $PYTHON mlp_train.py --sweep-id $SWEEP_ID --use-wandb
 
 echo "Completed sweep run ${SLURM_ARRAY_TASK_ID}"
