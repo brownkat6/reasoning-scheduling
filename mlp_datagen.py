@@ -1,24 +1,3 @@
-'''
-# Proof of concept: can MLP on hidden states predict required size? 
-Model: distilled Qwen 1.5B model. Datasets: "amc23", "aime24", "GPQADiamond", "math500", "gsm8k". $W=16$. Max new tokens $S=4096$.    
-MLP predictor: $\mathbb{R}^{1536}$ -> H=128 -> $\mathbb{R}^{S/W}.  
-For each question $q$, sample 100 reasoning traces. For each reasoning trace, test
-post-hoc whether we would have generated the answer if we had stopped generating tokens after W, 2W, 3W,...,S tokens, inserted the suffix "...Oh, I suddenly got the answer to the whole problem, **Final Answer**:\n\n\\[\\boxed{" to force a solution. Compute the proportion of the 100 samples for which the early terminated answer would have been correct. This yields a $W/S$ element vector of proportions in range [0,1]. If a sampled reasoning trace only has, for instance, 100 tokens, then the early stopping probability after 200 tokens is just the proportion after 100 tokens elapsed.   
-
-On the train/test set, compute MSE as well as the pearson correlation between predicted and actual proportions.  Ideally not overfit within GSM8K. If this goes well, test correlation as well on another dataset, maybe Math500 (secondary math domain which might require secondary model as evaluator) or MMLU (MCQ domain). In the best of all worlds the performance generalizes.   
-
-1) Get GSM8K questions from train and test split and load the distill qwen 1.5b model.  
-2) Sample 100 reasoning traces up to S=4096 new tokens per question, generated with temperature 0.6. For each sampled trace, generate the answer if we had stopped after W,2W,3W,... tokens. For each sampled trace, store a list of the W/S generated answers, a W/S length list of 0/1 indicating whether a given answer was correct, and the proportion of answers that were correct.  
-3) Generate a pandas dataframe with 1 rows per question in GSM8K. The columns should be the GSM8K question id, the question text itself, whether the question is from the train or test split, the hidden state from the model from the first forward pass of the question (before any reasoning/answer tokens are generated), the reasoning trace id, the generated reasoning trace, the list of W/S generated answers if we had stopped early after any point, inserted the answer suffix and generated and extracted a numerical answer, the list of W/S extracted answers, and the corresponding list of W/S proportions across all 100 traces for this query that were correct. Note that within the group of 100 rows corresponding to a single GSM8K question, the question id, question text itself, hidden state, and list of proportions after early stopping after each point will all be shared. Save the computed data to a csv.      
-4) Write separate python code that loads the pandas dataframe from csv after it has been computed.  The new python code should construct an MLP that takes in the 1536 dimension hidden states as input, has one hidden layer with dimension 128, and outputs a W/S dimensional vector. It should be trained on a dataset with one entry per question in the GSM8K dataset, where the input is the hidden state and the output is the W/S dimensional list of proportions. The code should report the MSE on both the train and the test set, and it should also output data about, for each W/S possible early stopping position, the pearson correlation between the predicted value and the actual value.  It should report MSE both across the entire predicted and actual output and across each individual entry of the W/S output individually.  
-
-Data quantities
-    GSM8K: ~13XX test, 74XX train
-    numina: 859K train, 100 test
-    amc23: 50 test
-    aime24: 90 test
-'''
-
 import argparse
 import re
 import numpy as np
@@ -70,11 +49,44 @@ def get_model_and_tokenizer():
         raise RuntimeError(f"Error loading model {model_name}: {e}")
     return model, tokenizer
 
-def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
+def get_hidden_layer_index(layer_position, total_layers):
+    """
+    Determine the index of the hidden layer based on the specified position.
+    
+    Args:
+        layer_position (str): 'first', 'middle', or 'last'
+        total_layers (int): Total number of hidden layers in the model
+    
+    Returns:
+        int: Index of the hidden layer to use
+    """
+    if layer_position == 'first':
+        return 0
+    elif layer_position == 'middle':
+        return total_layers // 2
+    elif layer_position == 'last':
+        return -1
+    else:
+        # If a specific index is provided
+        try:
+            idx = int(layer_position)
+            if idx < 0 or idx >= total_layers:
+                print(f"Warning: Layer index {idx} out of bounds. Using last layer.")
+                return -1
+            return idx
+        except ValueError:
+            print(f"Warning: Invalid layer position '{layer_position}'. Using last layer.")
+            return -1
+
+def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', 
+                   batch_size=100, dataset='gsm8k', hidden_layer='last'):
     '''
     This function generates the X data, which is the hidden states of the model.
     This script is MUCH cheaper to run than generate_data_Y because it doesn't require generating any reasoning traces.
     This function should be modified to generate predictors other than the hidden states if we are sweeping over multiple predictors.
+    
+    Args:
+        hidden_layer (str): Which hidden layer to use as X data. Options: 'first', 'middle', 'last', or a specific index.
     '''
     questions = load_dynasor_dataset(dataset, split=split)
     print(f"Loaded {len(questions)} total questions")
@@ -106,8 +118,13 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     '''
     # Load the Qwen model and tokenizer
     model, tokenizer = get_model_and_tokenizer()
-    # Move model to GPU once
-    # model = model.to('cuda')
+    
+    # Get total number of hidden layers
+    # For most models, can be determined from config
+    total_hidden_layers = len(model.config.hidden_sizes) if hasattr(model.config, 'hidden_sizes') else model.config.num_hidden_layers
+    # Get the index of the hidden layer to use
+    hidden_layer_idx = get_hidden_layer_index(hidden_layer, total_hidden_layers)
+    print(f"Using hidden layer at index {hidden_layer_idx} out of {total_hidden_layers} total layers")
 
     # Pre-compute hidden states for all questions in batch at once
     print("Computing hidden states for all questions in batch...")
@@ -127,19 +144,21 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
         
         with torch.inference_mode():
             batch_outputs = model(**batch_inputs, output_hidden_states=True)
-            # Get hidden states for this batch
-            hidden_states = batch_outputs.hidden_states[-1][:, -1, :].detach()  # Shape: [batch_size, 1536]
+            # Get hidden states for this batch from the specified layer
+            hidden_states = batch_outputs.hidden_states[hidden_layer_idx][:, -1, :].detach()  # Shape: [batch_size, hidden_dim]
             all_hidden_states.append(hidden_states)
             
         # Clear CUDA cache after each batch
         torch.cuda.empty_cache()
     
     # Concatenate all batches
-    batch_hidden_states = torch.cat(all_hidden_states, dim=0)  # Shape: [total_size, 1536]
+    batch_hidden_states = torch.cat(all_hidden_states, dim=0)  # Shape: [total_size, hidden_dim]
     
     print(f"Finished computing hidden states for all questions in batch")
+    hidden_dim = batch_hidden_states.shape[1]
     # Assert hidden states have correct dimensions
-    assert batch_hidden_states.shape[1] == 1536, f"Hidden state dimension is {batch_hidden_states.shape[1]}, expected 1536"
+    assert hidden_dim > 0, f"Hidden state dimension is {hidden_dim}, which is invalid"
+    print(f"Hidden state dimension is {hidden_dim}")
     
     # Create mapping from question to its hidden state
     hidden_states_map = {}
@@ -172,9 +191,6 @@ def generate_data_X(batch_idx, split='train', num_traces=100, W=16, S=256, outpu
     df.to_csv(output_csv, index=False)
     print(f"Data saved to {output_csv}")
     
-    
-
-
 def generate_data_Y(batch_idx, split='train', num_traces=100, W=16, S=256, output_csv='gsm8k_results.csv', batch_size=100, dataset='gsm8k'):
     '''
     This function generates the Y data, which is the early stopping correct proportions.
@@ -291,24 +307,37 @@ def main():
     parser.add_argument("--S", type=int, default=256, help="Maximum number of new tokens")
     parser.add_argument("--generate-X-data", type=str, default="False", choices=["True","False"], help="Generate X data")
     parser.add_argument("--generate-Y-data", type=str, default="False", choices=["True","False"], help="Generate Y data")
+    parser.add_argument("--hidden-layer", type=str, default="last", 
+                        help="Which hidden layer to use for X data. Options: 'first', 'middle', 'last', or specific index")
     
     args = parser.parse_args()
     print("generate_X_data: ", args.generate_X_data)
     print("generate_Y_data: ", args.generate_Y_data)
+    print("hidden_layer: ", args.hidden_layer)
     
-    STEM="/n/netscratch/dwork_lab/Lab/katrina/reasoning_scheduling_new/"
-    csv_file_X = f"data/{args.dataset}_results/{args.dataset}_X_{args.split}_{args.batch_idx}.csv"
+    STEM="/n/netscratch/gershman_lab/Lab/amuppidi/"
+    
+    # Include hidden layer information in the directory name only
+    layer_dir = f"layer_{args.hidden_layer}" if args.generate_X_data == "True" else ""
+    
+    csv_file_X = f"data/{args.dataset}_results/{layer_dir}/{args.dataset}_X_{args.split}_{args.batch_idx}.csv"
     csv_file_Y = f"data/{args.dataset}_results/{args.dataset}_Y_{args.split}_{args.batch_idx}.csv"
-    csv_file_X = STEM+csv_file_X
-    csv_file_Y = STEM+csv_file_Y
+    
+    # Create the directory if it doesn't exist
+    if args.generate_X_data == "True":
+        os.makedirs(os.path.dirname(STEM + 'reasoning_scheduling_new_orig/' + csv_file_X), exist_ok=True)
+    
+    csv_file_X = STEM + 'reasoning_scheduling_new_orig/' + csv_file_X
+    csv_file_Y = STEM + 'reasoning_scheduling_new/' + csv_file_Y
 
     if args.batch_idx is None:
         parser.error("--batch_idx is required when using --generate")
     if args.split is None:
         parser.error("--split is required when using --generate")
     if args.generate_X_data=="True":
-        print(f"Generating X data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
-        generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, dataset=args.dataset, S=args.S)
+        print(f"Generating X data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset} using hidden layer {args.hidden_layer}")
+        generate_data_X(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_X, 
+                       dataset=args.dataset, S=args.S, hidden_layer=args.hidden_layer)
     if args.generate_Y_data=="True":
         print(f"Generating Y data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
         generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S)
