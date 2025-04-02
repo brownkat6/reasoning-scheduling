@@ -315,7 +315,9 @@ def main():
     print("generate_Y_data: ", args.generate_Y_data)
     print("hidden_layer: ", args.hidden_layer)
     
-    STEM="/n/netscratch/gershman_lab/Lab/amuppidi/"
+    # STEM="/n/netscratch/gershman_lab/Lab/amuppidi/"
+    from constants import STEM
+    #STEM="/n/netscratch/dwork_lab/Lab/katrina"
     
     # Include hidden layer information in the directory name only
     layer_dir = f"layer_{args.hidden_layer}" if args.generate_X_data == "True" else ""

@@ -11,5 +11,12 @@
 #SBATCH --cpus-per-task=4          # Number of CPU cores per task
 
 
-cd /n/home04/amuppidi/reasoning-scheduling
-~/.conda/envs/torch/bin/python -u mlp_train.py
+# if the environment variable $USER is katrinabrown, cd /n/home11/katrinabrown/thesis/reasoning-scheduling
+if [ "$USER" == "katrinabrown" ]; then
+    cd /n/home11/katrinabrown/thesis/reasoning-scheduling
+    PYTHON="/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python"
+else
+    cd /n/home04/amuppidi/reasoning-scheduling
+    PYTHON="~/.conda/envs/torch/bin/python"
+fi
+$PYTHON -u mlp_train.py

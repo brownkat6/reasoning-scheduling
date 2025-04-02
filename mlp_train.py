@@ -30,8 +30,9 @@ def train_mlp_sweep(config=None):
         config = wandb.config
         
         # Get paths
-        X_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/"
-        Y_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/"
+        from constants import X_STEM, Y_STEM
+        #X_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/"
+        #Y_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/"
         
         train_data_dir_X = os.path.join(X_STEM, f"{config.train_dataset}_results")
         train_data_dir_Y = os.path.join(Y_STEM, f"{config.train_dataset}_results")
@@ -689,8 +690,9 @@ def main():
         return
     
     # Define the root directories for X and Y data
-    X_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/"
-    Y_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/"
+    from constants import X_STEM, Y_STEM
+    #X_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/"
+    #Y_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/"
     
     # Construct full paths for X and Y data
     train_data_dir_X = os.path.join(X_STEM, f"{args.train_dataset}_results")

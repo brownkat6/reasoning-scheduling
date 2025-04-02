@@ -54,7 +54,7 @@ def load_gsm8k_data(split):
 
 def load_numina_data(split):
     """Load Numina dataset"""
-    ds = load_dataset("AI-MO/NuminaMath-CoT", split=split)#, cache_dir="/n/netscratch/dwork_lab/Lab/katrina/datasets")
+    ds = load_dataset("AI-MO/NuminaMath-CoT", split=split)
     
     test_data = []
     for i, sample in enumerate(ds):

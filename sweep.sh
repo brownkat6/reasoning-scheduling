@@ -16,7 +16,14 @@
 SWEEP_ID="fh3odiup"
 
 # Run the sweep agent for a single run
-cd /n/home04/amuppidi/reasoning-scheduling
-~/.conda/envs/torch/bin/python mlp_train.py --sweep-id $SWEEP_ID --use-wandb
+# if the environment variable $USER is katrinabrown, cd /n/home11/katrinabrown/thesis/reasoning-scheduling
+if [ "$USER" == "katrinabrown" ]; then
+    cd /n/home11/katrinabrown/thesis/reasoning-scheduling
+    PYTHON="/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python"
+else
+    cd /n/home04/amuppidi/reasoning-scheduling
+    PYTHON="~/.conda/envs/torch/bin/python"
+fi
+$PYTHON mlp_train.py --sweep-id $SWEEP_ID --use-wandb
 
 echo "Completed sweep run ${SLURM_ARRAY_TASK_ID}"
