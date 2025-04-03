@@ -4,7 +4,8 @@ import os
 USER = os.environ.get('USER', '')
 
 # Define base paths based on user
-if USER == "katrinabrown":
+#if USER == "katrinabrown":
+if True:
     # Paths for katrinabrown
     BASE_PATH = "/n/netscratch/dwork_lab/Lab/katrina"
     STEM = f"{BASE_PATH}/reasoning_scheduling_new/"
