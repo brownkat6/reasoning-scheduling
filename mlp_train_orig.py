@@ -806,14 +806,15 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
 
 
 def main():
+    from constants import X_STEM, Y_STEM
     parser = argparse.ArgumentParser(description="MLP test experiment for reasoning traces with wandb logging")
     # New arguments for refactored train_mlp
     parser.add_argument("--train_dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Dataset for training")
     parser.add_argument("--train_split", type=str, default='train', choices=['train', 'test'], help="Split to use for training")
     parser.add_argument("--test_dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Dataset for testing")
     parser.add_argument("--test_split", type=str, default='test', choices=['train', 'test'], help="Split to use for testing")
-    parser.add_argument("--X-STEM", type=str, default="/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/", help="Base directory for X data")
-    parser.add_argument("--Y-STEM", type=str, default="/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/", help="Base directory for Y data")
+    parser.add_argument("--X-STEM", type=str, default=X_STEM, help="Base directory for X data")
+    parser.add_argument("--Y-STEM", type=str, default=Y_STEM, help="Base directory for Y data")
     parser.add_argument("--X-key", type=str, default='hidden_state', choices=['hidden_state'], help="Key to use for input to MLP")
     parser.add_argument("--num-epochs", type=int, default=20, help="Number of training epochs")
     parser.add_argument("--batch-size", type=int, default=4, help="Batch size for training")
@@ -824,8 +825,6 @@ def main():
     args = parser.parse_args()
     
     # Construct full paths for X and Y data
-    X_STEM = args.X_STEM
-    Y_STEM = args.Y_STEM
     
     train_data_dir_X = os.path.join(X_STEM, f"{args.train_dataset}_results")
     train_data_dir_Y = os.path.join(Y_STEM, f"{args.train_dataset}_results")

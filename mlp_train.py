@@ -225,13 +225,6 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
 
     # Create model with the specified architecture parameters
     
-    #model_mlp = MLP(
-    #    input_dim=X_train.shape[1], 
-    #    hidden_dims=hidden_dims, 
-    #    output_dim=Y_train.shape[1],
-    #    activation=activation,
-    #    dropout=dropout
-    #).to('cuda')
     model_mlp = MLP(input_dim=1536, hidden_dim=256, output_dim=Y_train.shape[1]).to('cuda')  # Move model to CUDA
 
     
