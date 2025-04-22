@@ -296,6 +296,7 @@ def parse_args():
     # Add new arguments for MLP configuration
     parser.add_argument("--mlp_model", type=str, required=True, help="Path to MLP model")
     parser.add_argument("--hidden_layer", type=int, required=True, help="Hidden layer used for MLP")
+    parser.add_argument("--output", type=str, default="figures", help="Output directory")
     return parser.parse_args()
 
 def get_directory_paths(dataset, model, split, start, end, mlp_model, hidden_layer):
