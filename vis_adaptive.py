@@ -7,6 +7,7 @@ from glob import glob
 import argparse
 from datetime import datetime
 from collections import defaultdict
+import re
 
 '''
 /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u vis_adaptive.py     
@@ -283,22 +284,50 @@ def create_prediction_scatter(adaptive_predictions, oracle_predictions=None):
     plt.grid(True, alpha=0.3)
     
     # Save plot
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plt.savefig(f'figures/prediction_scatter.png', dpi=300, bbox_inches='tight')
 
-def get_directory_paths(dataset, model, split, start, end):
-    """Construct directory paths based on input parameters"""
-    base_dir = f"results"
+def parse_args():
+    parser = argparse.ArgumentParser(description="Visualize adaptive and non-adaptive results")
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset name (e.g., gsm8k)")
+    parser.add_argument("--model", type=str, required=True, help="Model name (e.g., deepseek-ai-DeepSeek-R1-Distill-Qwen-1.5B)")
+    parser.add_argument("--split", type=str, required=True, help="Data split (e.g., train, test)")
+    parser.add_argument("--start", type=int, required=True, help="Start index")
+    parser.add_argument("--end", type=int, required=True, help="End index")
+    # Add new arguments for MLP configuration
+    parser.add_argument("--mlp_model", type=str, required=True, help="Path to MLP model")
+    parser.add_argument("--hidden_layer", type=int, required=True, help="Hidden layer used for MLP")
+    return parser.parse_args()
+
+def get_directory_paths(dataset, model, split, start, end, mlp_model, hidden_layer):
+    """Construct directory paths based on input parameters and MLP config"""
+    base_dir = "results"
+    model_name = model.replace("/", "-")
     
-    # Construct file names based on the pattern
-    adaptive_file = f"adaptive_{model}_{dataset}_mlp{dataset}_{split}_{start}_{end}"
-    non_adaptive_file = f"{model}_{dataset}_step32_max256_trials10_{start}_{end}"
-    oracle_file = f"oracle_{model}_{dataset}_mlp{dataset}_{split}_{start}_{end}"
+    # Extract MLP configuration from model path
+    mlp_suffix = ""
+    if mlp_model is not None:
+        # Extract the relevant part from the MLP model path
+        # e.g., from "models/mlp_gsm8k_train_layer_16_arch_256_act_relu_drop_0.00.pt"
+        mlp_name = os.path.basename(mlp_model)
+        if "layer" in mlp_name and "arch" in mlp_name:
+            # Extract layer and architecture info
+            layer_info = re.search(r'layer_\d+', mlp_name)
+            arch_info = re.search(r'arch_\d+', mlp_name)
+            if layer_info and arch_info:
+                mlp_suffix = f"_{layer_info.group()}_{arch_info.group()}"
+        elif hidden_layer is not None:
+            # If only hidden layer is specified, add that to the suffix
+            mlp_suffix = f"_layer_{hidden_layer}"
     
-    # Construct full paths
-    adaptive_dir = os.path.join(base_dir,  adaptive_file)
-    non_adaptive_dir = os.path.join(base_dir,  non_adaptive_file)
-    oracle_dir = os.path.join(base_dir,  oracle_file)
+    # Construct file names based on the pattern used by run_adaptive.py
+    adaptive_dir = os.path.join(base_dir, 
+        f"adaptive_{model_name}_{dataset}_mlp{dataset}_{split}{mlp_suffix}_{start}_{end}")
+    
+    non_adaptive_dir = os.path.join(base_dir,
+        f"{model_name}_{dataset}_step32_max256_trials10_{start}_{end}")
+    
+    oracle_dir = os.path.join(base_dir,
+        f"oracle_{model_name}_{dataset}_mlp{dataset}_{split}{mlp_suffix}_{start}_{end}")
     
     return adaptive_dir, non_adaptive_dir, oracle_dir
 
@@ -373,8 +402,7 @@ def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, spl
     # Create figures directory if it doesn't exist
     os.makedirs('figures', exist_ok=True)
     
-    # Save plot with timestamp
-    # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Save plot
     plot_path = f'figures/accuracy_comparison_{end}.png'
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"\nPlot saved to: {plot_path}")
@@ -400,26 +428,49 @@ def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, spl
     plt.show()
 
 def main():
-    parser = argparse.ArgumentParser(description="Visualize adaptive and non-adaptive results")
-    parser.add_argument("--dataset", type=str, required=True, help="Dataset name (e.g., gsm8k)")
-    parser.add_argument("--model", type=str, required=True, help="Model name (e.g., deepseek-ai-DeepSeek-R1-Distill-Qwen-1.5B)")
-    parser.add_argument("--split", type=str, required=True, help="Data split (e.g., train, test)")
-    parser.add_argument("--start", type=int, required=True, help="Start index")
-    parser.add_argument("--end", type=int, required=True, help="End index")
+    args = parse_args()
     
-    args = parser.parse_args()
-    
-    # Get directory paths based on arguments
+    # Get directory paths based on arguments including MLP config
     adaptive_dir, non_adaptive_dir, oracle_dir = get_directory_paths(
         args.dataset,
         args.model,
         args.split,
         args.start,
-        args.end
+        args.end,
+        args.mlp_model,
+        args.hidden_layer
     )
     print(f"Adaptive directory: {adaptive_dir}")
     print(f"Non-adaptive directory: {non_adaptive_dir}")
     print(f"Oracle directory: {oracle_dir}")
+    
+    # Setup output directory
+    if args.output:
+        output_dir = args.output
+    else:
+        model_name = args.model.replace("/", "-")
+        prefix = "oracle" if args.use_oracle else "adaptive"
+        
+        # Extract MLP model info if custom model is provided
+        mlp_suffix = ""
+        if args.mlp_model is not None:
+            # Extract the relevant part from the MLP model path
+            # e.g., from "models/mlp_gsm8k_train_layer_16_arch_256_act_relu_drop_0.00.pt"
+            # we want "layer_16_arch_256"
+            mlp_name = os.path.basename(args.mlp_model)
+            if "layer" in mlp_name and "arch" in mlp_name:
+                # Extract layer and architecture info
+                layer_info = re.search(r'layer_\d+', mlp_name)
+                arch_info = re.search(r'arch_\d+', mlp_name)
+                if layer_info and arch_info:
+                    mlp_suffix = f"_{layer_info.group()}_{arch_info.group()}"
+        elif args.hidden_layer is not None:
+            # If only hidden layer is specified, add that to the suffix
+            mlp_suffix = f"_layer_{args.hidden_layer}"
+        
+        output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}{mlp_suffix}_{args.start}_{args.end}"
+    
+    os.makedirs(output_dir, exist_ok=True)
     
     # TODO: WHY again is the actual deviating from the predicted accuracy?!!!!! 
     

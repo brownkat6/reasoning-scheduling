@@ -13,11 +13,12 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 print(f"Adding {os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))} to path")
 import torch.nn as nn
-from datetime import datetime
 import random
 from collections import Counter
 from mlp import MLP
 import run
+import json
+import re
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Adaptive Token Deprivation Experiment")
@@ -66,6 +67,19 @@ def parse_args():
         action="store_true",
         help="Use ground truth early stopping proportions instead of MLP predictions"
     )
+    # Add new optional arguments for custom MLP
+    parser.add_argument(
+        "--mlp_model",
+        type=str,
+        default=None,
+        help="Optional: Path to a custom MLP model"
+    )
+    parser.add_argument(
+        "--hidden_layer",
+        type=int,
+        default=None,
+        help="Optional: Which transformer layer to use for hidden states (defaults to last layer if not specified)"
+    )
     return parser.parse_args()
 
 def load_model_and_tokenizer(model_name, url=None, api_key=None, cache_dir=None):
@@ -84,11 +98,12 @@ def load_model_and_tokenizer(model_name, url=None, api_key=None, cache_dir=None)
         model.eval()
         return model, tokenizer
 
-def get_hidden_states(model, tokenizer, prompts, batch_size=16):
+def get_hidden_states(model, tokenizer, prompts, batch_size=16, layer_idx=-1):
     """Get hidden states using local model in batches"""
     device = next(model.parameters()).device
     all_hidden_states = []
-    print(f"Getting hidden states for {len(prompts)} prompts")
+    layer_str = "last layer" if layer_idx == -1 else f"layer {layer_idx}"
+    print(f"Getting hidden states for {len(prompts)} prompts from {layer_str}")
     
     # Process prompts in batches
     for i in range(0, len(prompts), batch_size):
@@ -98,8 +113,8 @@ def get_hidden_states(model, tokenizer, prompts, batch_size=16):
         
         with torch.inference_mode():
             outputs = model(**inputs, output_hidden_states=True)
-            # Get hidden states from last layer, last token
-            batch_hidden_states = outputs.hidden_states[-1][:, -1, :].detach()
+            # Get hidden states from specified layer
+            batch_hidden_states = outputs.hidden_states[layer_idx][:, -1, :].detach()
             all_hidden_states.append(batch_hidden_states)
             
         # Clear CUDA cache after each batch
@@ -213,11 +228,46 @@ def main():
     if args.output:
         output_dir = args.output
     else:
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         model_name = args.model.replace("/", "-")
         prefix = "oracle" if args.use_oracle else "adaptive"
-        output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}_{args.start}_{args.end}"
+        
+        # Extract MLP model info if custom model is provided
+        mlp_suffix = ""
+        if args.mlp_model is not None:
+            # Extract the relevant part from the MLP model path
+            # e.g., from "models/mlp_gsm8k_train_layer_16_arch_256_act_relu_drop_0.00.pt"
+            # we want "layer_16_arch_256"
+            mlp_name = os.path.basename(args.mlp_model)
+            if "layer" in mlp_name and "arch" in mlp_name:
+                # Extract layer and architecture info
+                layer_info = re.search(r'layer_\d+', mlp_name)
+                arch_info = re.search(r'arch_\d+', mlp_name)
+                if layer_info and arch_info:
+                    mlp_suffix = f"_{layer_info.group()}_{arch_info.group()}"
+        elif args.hidden_layer is not None:
+            # If only hidden layer is specified, add that to the suffix
+            mlp_suffix = f"_layer_{args.hidden_layer}"
+        
+        # Construct output directory name
+        output_dir = f"results/{prefix}_{model_name}_{args.dataset}_mlp{args.mlp_train_dataset}_{args.mlp_train_split}{mlp_suffix}_{args.start}_{args.end}"
+    
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Save configuration metadata
+    config_file = os.path.join(output_dir, "config.json")
+    config = {
+        "model": args.model,
+        "dataset": args.dataset,
+        "mlp_train_dataset": args.mlp_train_dataset,
+        "mlp_train_split": args.mlp_train_split,
+        "mlp_model": args.mlp_model,
+        "hidden_layer": args.hidden_layer,
+        "start": args.start,
+        "end": args.end,
+        "is_oracle": args.use_oracle
+    }
+    with open(config_file, "w") as f:
+        json.dump(config, f, indent=2)
 
     model, tokenizer = load_model_and_tokenizer(args.model, cache_dir)
     
@@ -251,14 +301,23 @@ def main():
         
         print(f"Loaded oracle data from {oracle_file}")
     else:
-        # Load and use MLP for predictions
-        mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
+        # Determine model path and configuration
+        if args.mlp_model is not None:
+            # Use custom model path if provided
+            mlp_path = args.mlp_model
+            print(f"Using custom MLP model from {mlp_path}")
+        else:
+            # Use default path construction
+            mlp_path = f'models/mlp_{args.mlp_train_dataset}_{args.mlp_train_split}.pt'
+            print(f"Using default MLP model path: {mlp_path}")
+        
+        # Load the model
         checkpoint = torch.load(mlp_path, map_location='cuda', weights_only=False)
         if 'model' in checkpoint:
             mlp_model = checkpoint['model'].cuda()
         else:
             config = checkpoint['config']
-            config['hidden_dim']=256
+            config['hidden_dim'] = 256
             mlp_model = MLP(
                 input_dim=config['input_dim'],
                 hidden_dim=config['hidden_dim'],
@@ -267,8 +326,9 @@ def main():
             mlp_model.load_state_dict({k: v.cuda() for k, v in checkpoint['model_state_dict'].items()})
         mlp_model.eval()
         
-        # Get hidden states and predictions
-        hidden_states = get_hidden_states(model, tokenizer, prompts)
+        # Get hidden states using specified layer or default to last layer
+        layer_idx = args.hidden_layer if args.hidden_layer is not None else -1
+        hidden_states = get_hidden_states(model, tokenizer, prompts, layer_idx=layer_idx)
         with torch.inference_mode():
             predictions = mlp_model(hidden_states.cuda()).cpu().numpy()
 

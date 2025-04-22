@@ -10,12 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from scipy.stats import pearsonr
-from datasets import load_dataset
-from Dynasor.benchmark.TokenDeprivation import utils
-from Dynasor.benchmark.TokenDeprivation.run import execute_question_reuse
-from Dynasor.benchmark.TokenDeprivation import run
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from mlp import MLP
 # Updated MLP class to support different architectures
 
@@ -329,11 +324,9 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     baseline_mse_test_test_means = np.mean((baseline_test_pred_test_means - Y_test_np)**2)
     
     # Add layer and model info to names
-    arch_str = "_".join([str(h) for h in hidden_dims])
-    if hidden_layer:
-        model_suffix = f"_layer_{hidden_layer}_arch_{arch_str}_act_{activation}_drop_{dropout:.2f}"
-    else:
-        model_suffix = f"_arch_{arch_str}_act_{activation}_drop_{dropout:.2f}"
+    layer_str = f"_layer_{hidden_layer}" if hidden_layer is not None else ""
+    arch_str = f"_arch_{hidden_dims[0]}" if isinstance(hidden_dims, (list, tuple)) else f"_arch_{hidden_dims}"
+    model_suffix = f"{layer_str}{arch_str}_act_{activation}_drop_{dropout:.2f}"
     
     print("\nModel Performance:")
     print(f"Overall MSE on train: {mse_train_overall:.4f}")
@@ -388,8 +381,18 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     # Create models directory if it doesn't exist
     os.makedirs('models', exist_ok=True)
     
-    # Save the model
-    model_filename = f'models/mlp_{train_dataset_name}_{train_split}{model_suffix}.pt'
+    # Modify model saving to match run_adaptive.py's expected format
+    # Extract layer info for filename
+    layer_str = f"_layer_{hidden_layer}" if hidden_layer is not None else ""
+    
+    # Extract architecture info
+    arch_str = f"_arch_{hidden_dims[0]}" if isinstance(hidden_dims, (list, tuple)) else f"_arch_{hidden_dims}"
+    
+    # Construct model filename
+    #model_filename = f'models/mlp_{train_dataset_name}_{train_split}{model_suffix}.pt'
+    model_filename = f'models/mlp_{train_dataset_name}_{train_split}{layer_str}{arch_str}_act_{activation}_drop_{dropout:.2f}.pt'
+    
+    # Save the model with all necessary information
     torch.save({
         'model_state_dict': model_mlp.state_dict(),
         'train_means': train_means,  # Save training means for future reference
