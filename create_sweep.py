@@ -60,7 +60,7 @@ def create_sweep_configuration(
             # Learning rate
             'learning_rate': {
                 'distribution': 'log_uniform_values',
-                'min': 1e-4,
+                'min': 1e-3,
                 'max': 1e-2
             },
             
@@ -88,7 +88,7 @@ def create_sweep_configuration(
             'train_split': {'value': train_split},
             'test_dataset': {'value': test_dataset},
             'test_split': {'value': test_split},
-            'num_epochs': {'value': 25},
+            'num_epochs': {'value': 35},
             'X_key': {'value': 'hidden_state'}
         }
     }

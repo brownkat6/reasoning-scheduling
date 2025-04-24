@@ -975,3 +975,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
+# the data itself (hidden state, different layers, residual) - run 3 shell scripts to gen data (run generaete shell, run mlp with generate, then mlp wit testh)
+# prediction output ()
+# CSV files - propostion of answers that were corect, all stats
+# see sigmoid 
+# 

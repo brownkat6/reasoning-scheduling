@@ -1,22 +1,26 @@
 #!/bin/bash
-#SBATCH --job-name=reasoning_schedule_sweep # Job name
-#SBATCH --partition=seas_gpu
-#SBATCH --account=hankyang_lab # Account to charge for GPU usage
-#SBATCH --output=logs/reasoning_schedule_sweep_%A_%a.out # Standard output and error log
-#SBATCH --error=logs/reasoning_schedule_sweep_%A_%a.err # Standard error file
-#SBATCH --array=0-91 # 60 jobs total
-#SBATCH --time=0:05:00 # Time limit
-#SBATCH --nodes=1 # Number of nodes
-#SBATCH --ntasks=1 # Number of tasks
-#SBATCH --gres=gpu:1 # Request 1 GPUs
-#SBATCH --mem=128G # Memory per node
-#SBATCH --cpus-per-task=4 # Number of CPU cores per task
+# Create a sweep through all layers 0-27 and submit jobs for each
 
+# Base directory for X data
+BASE_X_STEM="/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data"
 
-SWEEP_ID="fh3odiup"
+# Create logs directory if it doesn't exist
+mkdir -p logs
 
-# Run the sweep agent for a single run
-cd /n/home04/amuppidi/reasoning-scheduling
-~/.conda/envs/torch/bin/python mlp_train.py --sweep-id $SWEEP_ID --use-wandb
+# Loop through all layers from 0 to 27
+for i in {0..27}; do
+    # Construct the X_STEM path
+    X_STEM="${BASE_X_STEM}/layer_${i}"
+    LAYER_NAME="layer_${i}"
+    
+    echo "Submitting job for layer_${i}"
+    echo "X_STEM: $X_STEM"
+    
+    # Submit the job with appropriate X_STEM
+    sbatch /n/home04/amuppidi/reasoning-scheduling/train.sh "$X_STEM" "$LAYER_NAME"
+    
+    # Optional: Add a small delay to avoid overwhelming the scheduler
+    sleep 0.5
+done
 
-echo "Completed sweep run ${SLURM_ARRAY_TASK_ID}"
+echo "All layer jobs submitted"

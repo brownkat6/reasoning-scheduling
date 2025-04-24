@@ -6,7 +6,7 @@ try:
 except:
     from Dynasor.benchmark.TokenDeprivation.utils import save_json, load_dataset, set_seed
     from Dynasor.benchmark.TokenDeprivation.clients import vllmClientModel, apply_chat_template
-from dynasor.core.evaluator import (
+from Dynasor.dynasor.core.evaluator import (
     extract_answer,
     strip_string,
     math_equal,

@@ -24,7 +24,7 @@ from scipy import stats
 def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', train_dataset='gsm8k',
               test_data_dir_X='', test_data_dir_Y='', test_split='test', test_dataset='gsm8k',
               num_epochs=20, batch_size=4, learning_rate=1e-3,
-              X_key='hidden_state', use_wandb=True, project_name="early-stopping-mlp"):
+              X_key='hidden_state', use_wandb=True, project_name="early-stopping-mlp", layer_name=""):
     """
     Train an MLP to predict the early stopping correctness proportions from the hidden state.
     Allows training on one dataset/split and testing on another.
@@ -42,10 +42,19 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
         X_key: Key to use for input features
         use_wandb: Whether to log to wandb
         project_name: wandb project name
+        layer_name: Name of the layer for wandb run name
     """
     # Initialize wandb
     if use_wandb:
-        run_name = f"{train_dataset}_{train_split}_to_{test_dataset}_{test_split}"
+        # Include layer name in run name if provided
+        if layer_name:
+            run_name = f"{layer_name}_{train_dataset}_{train_split}_to_{test_dataset}_{test_split}"
+        else:
+            run_name = f"{train_dataset}_{train_split}_to_{test_dataset}_{test_split}"
+        
+        # add batch size and learning rate to the run name for better tracking
+        run_name = f"{run_name}_bs{batch_size}_lr{str(learning_rate).replace('.', 'p')}"
+        
         wandb.init(project=project_name, name=run_name, config={
             "train_dataset": train_dataset,
             "train_split": train_split,
@@ -54,7 +63,8 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
             "num_epochs": num_epochs,
             "batch_size": batch_size,
             "learning_rate": learning_rate,
-            "X_key": X_key
+            "X_key": X_key,
+            "layer": layer_name
         })
     
     # Validate input directories
@@ -73,12 +83,12 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     def load_and_merge_data(data_dir_X, data_dir_Y, dataset, split):
         # Check if grouped file already exists
         grouped_file = f"{data_dir_Y}/{dataset}_grouped_{split}.csv"
-        if os.path.exists(grouped_file):
-            data = pd.read_csv(grouped_file)
-            if use_wandb:
-                wandb.log({f"{dataset}_{split}_data_loaded": True, 
-                          f"{dataset}_{split}_shape": data.shape})
-            return data
+        #if os.path.exists(grouped_file):
+        #    data = pd.read_csv(grouped_file)
+        #    if use_wandb:
+        #        wandb.log({f"{dataset}_{split}_data_loaded": True, 
+        #                  f"{dataset}_{split}_shape": data.shape})
+        #    return data
             
         # If not, load and merge X and Y files
         all_merged_data = []
@@ -299,31 +309,44 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
             "test_improvement_test_means_pct": test_improvement_test_means,
         })
 
-    # Create models directory if it doesn't exist
-    os.makedirs('models', exist_ok=True)
+    # Skip saving the model locally
+    print("\nSkipping local model save as requested")
     
-    # Save the model
-    model_filename = f'models/mlp_{train_dataset_name}_{train_split}.pt'
-    torch.save({
-        'model_state_dict': model_mlp.state_dict(),
-        'train_means': train_means,  # Save training means for future reference
-        'config': {
-            'input_dim': 1536,
-            'hidden_dim': 256,
-            'output_dim': Y_train.shape[1],
-            'train_dataset': train_dataset,
-            'train_split': train_split,
-            'num_epochs': num_epochs,
-            'batch_size': batch_size,
-            'learning_rate': learning_rate
-        }
-    }, model_filename)
-    print(f"\nModel saved to {model_filename}")
-    
-    # Log to wandb that model was saved
+    # Upload model weights to wandb instead of saving locally
     if use_wandb:
-        wandb.save(model_filename)
-        wandb.log({"model_saved": True})
+        # Save model state dictionary to wandb directly
+        model_artifact = wandb.Artifact(
+            f"model_{layer_name}_{train_dataset_name}_{train_split}", 
+            type="model",
+            description=f"MLP model trained on {train_dataset_name} {train_split} using {layer_name}"
+        )
+        
+        # Create a temporary file to save the model
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.pt') as tmp:
+            # Save model to temporary file
+            torch.save({
+                'model_state_dict': model_mlp.state_dict(),
+                'train_means': train_means,
+                'config': {
+                    'input_dim': 1536,
+                    'hidden_dim': 256,
+                    'output_dim': Y_train.shape[1],
+                    'train_dataset': train_dataset,
+                    'train_split': train_split,
+                    'num_epochs': num_epochs,
+                    'batch_size': batch_size,
+                    'learning_rate': learning_rate,
+                    'layer': layer_name
+                }
+            }, tmp.name)
+            
+            # Add the file to the artifact
+            model_artifact.add_file(tmp.name, "model.pt")
+        
+        # Log the artifact
+        wandb.log_artifact(model_artifact)
+        wandb.log({"model_uploaded_to_wandb": True})
 
     # Also print out the means themselves for comparison
     print("\nMean Values:")
@@ -451,16 +474,17 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     
     plt.tight_layout()
     figure_name = f'prediction_correlation_plots_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', figure_name), dpi=300, bbox_inches='tight')
     
-    # Log the figure to wandb
+    # Instead of saving to disk, upload directly to wandb
     if use_wandb:
-        wandb.log({"prediction_correlation_plots": wandb.Image(os.path.join('figures', figure_name))})
+        wandb.log({"prediction_correlation_plots": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', figure_name), dpi=300, bbox_inches='tight')
+        print(f"\nVisualization saved to figures/{figure_name}")
     
     plt.close()
     
-    print(f"\nVisualization saved to figures/{figure_name}")
-
     # Create a new figure for residuals normality plots
     plt.figure(figsize=(15, 5*n_rows))
     
@@ -533,6 +557,7 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     plt.grid(True, alpha=0.3)
     
     # Log aggregate skewness metrics to wandb
+    # Log aggregate skewness metrics to wandb
     if use_wandb:
         wandb.log({
             "train_all_positions_residual_skew": stats.skew(train_residuals_flat),
@@ -541,15 +566,16 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     
     plt.tight_layout()
     residuals_figure_name = f'residuals_normality_plots_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', residuals_figure_name), dpi=300, bbox_inches='tight')
     
-    # Log the residuals figure to wandb
+    # Upload to wandb instead of saving locally
     if use_wandb:
-        wandb.log({"residuals_normality_plots": wandb.Image(os.path.join('figures', residuals_figure_name))})
+        wandb.log({"residuals_normality_plots": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', residuals_figure_name), dpi=300, bbox_inches='tight')
+        print(f"\nVisualization saved to figures/{residuals_figure_name}")
     
     plt.close()
-    
-    print(f"\nVisualization saved to figures/{residuals_figure_name}")
     
     # Create histograms of predictions vs actuals
     plt.figure(figsize=(15, 5*n_rows))
@@ -583,15 +609,16 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     
     plt.tight_layout()
     histogram_figure_name = f'distribution_histograms_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', histogram_figure_name), dpi=300, bbox_inches='tight')
     
-    # Log the histograms to wandb
+    # Upload to wandb instead of saving locally
     if use_wandb:
-        wandb.log({"distribution_histograms": wandb.Image(os.path.join('figures', histogram_figure_name))})
+        wandb.log({"distribution_histograms": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', histogram_figure_name), dpi=300, bbox_inches='tight')
+        print(f"\nHistogram visualization saved to figures/{histogram_figure_name}")
     
     plt.close()
-    
-    print(f"\nHistogram visualization saved to figures/{histogram_figure_name}")
     
     # Create position-wise error plots
     plt.figure(figsize=(10, 6))
@@ -608,10 +635,13 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     plt.xticks(positions)
     
     mse_position_plot = f'position_wise_mse_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', mse_position_plot), dpi=300, bbox_inches='tight')
     
+    # Upload to wandb instead of saving locally
     if use_wandb:
-        wandb.log({"position_wise_mse": wandb.Image(os.path.join('figures', mse_position_plot))})
+        wandb.log({"position_wise_mse": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', mse_position_plot), dpi=300, bbox_inches='tight')
     
     plt.close()
     
@@ -630,10 +660,13 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     plt.ylim(-0.1, 1.1)
     
     pearson_position_plot = f'position_wise_pearson_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', pearson_position_plot), dpi=300, bbox_inches='tight')
     
+    # Upload to wandb instead of saving locally
     if use_wandb:
-        wandb.log({"position_wise_pearson": wandb.Image(os.path.join('figures', pearson_position_plot))})
+        wandb.log({"position_wise_pearson": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', pearson_position_plot), dpi=300, bbox_inches='tight')
     
     plt.close()
     
@@ -672,10 +705,13 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     
     plt.tight_layout()
     heatmap_plot = f'error_heatmap_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', heatmap_plot), dpi=300, bbox_inches='tight')
     
+    # Upload to wandb instead of saving locally
     if use_wandb:
-        wandb.log({"error_heatmap": wandb.Image(os.path.join('figures', heatmap_plot))})
+        wandb.log({"error_heatmap": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', heatmap_plot), dpi=300, bbox_inches='tight')
     
     plt.close()
     
@@ -769,10 +805,13 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
     
     plt.tight_layout()
     binary_metrics_plot = f'binary_metrics_{train_dataset_name}_{train_split}_to_{test_dataset_name}_{test_split}.png'
-    plt.savefig(os.path.join('figures', binary_metrics_plot), dpi=300, bbox_inches='tight')
     
+    # Upload to wandb instead of saving locally
     if use_wandb:
-        wandb.log({"binary_metrics": wandb.Image(os.path.join('figures', binary_metrics_plot))})
+        wandb.log({"binary_metrics": wandb.Image(plt)})
+    else:
+        # Save only if wandb is disabled
+        plt.savefig(os.path.join('figures', binary_metrics_plot), dpi=300, bbox_inches='tight')
     
     plt.close()
     
@@ -795,7 +834,8 @@ def train_mlp(train_data_dir_X='', train_data_dir_Y='', train_split='train', tra
             "final_test_mse": mse_test_overall,
             "final_train_pearson": r_train,
             "final_test_pearson": r_test,
-            "model_improvement_pct": test_improvement
+            "model_improvement_pct": test_improvement,
+            "layer_name": layer_name  # Add layer name to summary
         })
         
         # Finish the wandb run
@@ -813,25 +853,39 @@ def main():
     parser.add_argument("--test_dataset", type=str, default='gsm8k', choices=['gsm8k', 'math500', 'numina'], help="Dataset for testing")
     parser.add_argument("--test_split", type=str, default='test', choices=['train', 'test'], help="Split to use for testing")
     parser.add_argument("--X-STEM", type=str, default="/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/", help="Base directory for X data")
-    parser.add_argument("--Y-STEM", type=str, default="/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/", help="Base directory for Y data")
+    parser.add_argument("--Y-STEM", type=str, default="data/", help="Base directory for Y data")
     parser.add_argument("--X-key", type=str, default='hidden_state', choices=['hidden_state'], help="Key to use for input to MLP")
     parser.add_argument("--num-epochs", type=int, default=20, help="Number of training epochs")
-    parser.add_argument("--batch-size", type=int, default=4, help="Batch size for training")
-    parser.add_argument("--learning-rate", type=float, default=1e-3, help="Learning rate for training")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate for training")
     parser.add_argument("--no-wandb", action="store_true", help="Disable wandb logging")
     parser.add_argument("--wandb-project", type=str, default="early-stopping-mlp", help="wandb project name")
+    parser.add_argument("--layer", type=str, default="", help="Layer name for X data (e.g., layer_0, layer_1, etc.)")
     
     args = parser.parse_args()
+    
+    # Extract layer name from X-STEM if it contains 'layer_X'
+    layer_name = args.layer
+    if not layer_name and 'layer_' in args.X_STEM:
+        import re
+        match = re.search(r'layer_\d+', args.X_STEM)
+        if match:
+            layer_name = match.group(0)
     
     # Construct full paths for X and Y data
     X_STEM = args.X_STEM
     Y_STEM = args.Y_STEM
+    
+    # If X_STEM includes a layer directory
+    if layer_name and not X_STEM.endswith('/'):
+        X_STEM += '/'
     
     train_data_dir_X = os.path.join(X_STEM, f"{args.train_dataset}_results")
     train_data_dir_Y = os.path.join(Y_STEM, f"{args.train_dataset}_results")
     test_data_dir_X = os.path.join(X_STEM, f"{args.test_dataset}_results")
     test_data_dir_Y = os.path.join(Y_STEM, f"{args.test_dataset}_results")
     
+    print(f"Layer name: {layer_name}")
     print(f"X data directories:\n Train: {train_data_dir_X}\n Test: {test_data_dir_X}")
     print(f"Y data directories:\n Train: {train_data_dir_Y}\n Test: {test_data_dir_Y}")
     
@@ -849,7 +903,8 @@ def main():
             project_name=args.wandb_project,
             num_epochs=args.num_epochs,
             batch_size=args.batch_size,
-            learning_rate=args.learning_rate
+            learning_rate=args.learning_rate,
+            layer_name=layer_name
     )
 
 

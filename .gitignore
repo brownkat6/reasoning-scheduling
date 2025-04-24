@@ -1,2 +1,8 @@
-data/*
-logs/*
+data/
+logs/
+Dynasor/
+old/
+figures/
+wandb/
+# Ignore Python cache files
+__pycache__/
