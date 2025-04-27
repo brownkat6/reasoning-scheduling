@@ -242,7 +242,7 @@ def print_prediction_analysis(predictions_vs_actuals, run_type="Adaptive"):
         else:
             print(f"No valid predictions for budget {budget}")
 
-def create_prediction_scatter(adaptive_predictions, oracle_predictions=None):
+def create_prediction_scatter(adaptive_predictions, oracle_predictions=None, model_name="", dataset=""):
     """Create scatter plot of predicted vs actual proportions."""
     plt.figure(figsize=(10, 6))
     
@@ -283,8 +283,10 @@ def create_prediction_scatter(adaptive_predictions, oracle_predictions=None):
     plt.legend()
     plt.grid(True, alpha=0.3)
     
-    # Save plot
-    plt.savefig(f'figures/prediction_scatter.png', dpi=300, bbox_inches='tight')
+    # Save plot with model name
+    scatter_plot_path = f'figures/prediction_scatter_{model_name}_{dataset}.png'
+    plt.savefig(scatter_plot_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Visualize adaptive and non-adaptive results")
@@ -341,9 +343,11 @@ def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, spl
     # Create prediction scatter plot
     if oracle_dir:
         oracle_tokens, oracle_accuracies, oracle_counts, oracle_predictions = load_adaptive_results(oracle_dir)
-        create_prediction_scatter(adaptive_predictions, oracle_predictions)
+        create_prediction_scatter(adaptive_predictions, oracle_predictions, 
+                                model.replace("/", "-"), dataset)
     else:
-        create_prediction_scatter(adaptive_predictions)
+        create_prediction_scatter(adaptive_predictions, None, 
+                                model.replace("/", "-"), dataset)
     
     # Load oracle results if provided
     if oracle_dir:
@@ -403,8 +407,11 @@ def plot_results(adaptive_dir, non_adaptive_dir, oracle_dir, dataset, model, spl
     # Create figures directory if it doesn't exist
     os.makedirs('figures', exist_ok=True)
     
-    # Save plot
-    plot_path = f'figures/accuracy_comparison_{end}.png'
+    # Format model name for filenames
+    model_name_safe = model.replace("/", "-")
+    
+    # Save accuracy comparison plot with model name
+    plot_path = f'figures/accuracy_comparison_{model_name_safe}_{dataset}_{end}.png'
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"\nPlot saved to: {plot_path}")
     

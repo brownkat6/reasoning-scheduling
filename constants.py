@@ -11,10 +11,12 @@ if True:
     STEM = f"{BASE_PATH}/reasoning_scheduling_new/"
     X_STEM = f"{STEM}/data/"
     Y_STEM = f"{STEM}/data/"
+    MODELS_STEM = f"{BASE_PATH}/models/"
 else:
     # Paths for amuppidi
     BASE_PATH = "/n/netscratch/gershman_lab/Lab/amuppidi"
     STEM = f"{BASE_PATH}/reasoning_scheduling_new/"
     X_STEM = f"{BASE_PATH}/reasoning_scheduling_new_orig/data/"
     Y_STEM = f"{STEM}/data/"
+    MODELS_STEM = f"{BASE_PATH}/models/"
 

@@ -12,6 +12,7 @@ import torch.optim as optim
 from scipy.stats import pearsonr
 
 from mlp import MLP
+from constants import X_STEM, Y_STEM, MODELS_STEM
 # Updated MLP class to support different architectures
 
 
@@ -686,7 +687,6 @@ def main():
         return
     
     # Define the root directories for X and Y data
-    from constants import X_STEM, Y_STEM
     #X_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new_orig/data/"
     #Y_STEM = "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning_scheduling_new/data/"
     
