@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=data_gen       # Job name
 #SBATCH --partition=seas_gpu
-#SBATCH --output=logs/datagen_%A_%a.out   # Standard output and error log
-#SBATCH --error=logs/datagen_%A_%a.err    # Standard error file
-#SBATCH --array=0-91               # 89 regular jobs + 3 special dataset jobs
-#SBATCH --time=4:00:00             # Time limit
+#SBATCH --account=hankyang_lab         # Account to charge for GPU usage
+#SBATCH --output=logs/datagen_layer_%A_%a.out   # Standard output and error log
+#SBATCH --error=logs/datagen_layer_%A_%a.err    # Standard error file
+#SBATCH --array=0-91 # 92 jobs total, run at most 12 at once
+#SBATCH --time=0:30:00             # Time limit
 #SBATCH --nodes=1                   # Number of nodes
 #SBATCH --ntasks=1                 # Number of tasks
 #SBATCH --gres=gpu:1               # Request 1 GPUs
-#SBATCH --constraint='h100'        # Request H100 GPUs
 #SBATCH --mem=128G                 # Memory per node
 #SBATCH --cpus-per-task=4          # Number of CPU cores per task
 
@@ -25,6 +25,7 @@ mkdir -p data/gsm8k_results
 # Parse GENERATE_X from the first command line arg and GENERATE_Y from the second command line arg
 GENERATE_X=$1
 GENERATE_Y=$2
+HIDDEN_LAYER=${3:-last}  # Default to "last" if not provided
 
 # Handle special cases for last three array indices
 if [ $SLURM_ARRAY_TASK_ID -eq 89 ]; then
@@ -60,13 +61,22 @@ fi
 # Example generates only X data: $ sbatch generate_data_gsm8k.sh True False
 # Example generates only Y data: $ sbatch generate_data_gsm8k.sh False True
 # Example generates both X and Y data: $ sbatch generate_data_gsm8k.sh True True
+# Example generates X data from the middle layer: $ sbatch generate_data_gsm8k.sh True False middle
+
+# Print information about what we're doing
+echo "Processing $SPLIT split, batch $BATCH_IDX for dataset $DATASET"
+echo "Generate X data: $GENERATE_X"
+echo "Generate Y data: $GENERATE_Y"
+echo "Using hidden layer: $HIDDEN_LAYER"
 
 # Run mlp_datagen.py with appropriate parameters
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_datagen.py \
+cd /n/home04/amuppidi/reasoning-scheduling
+~/.conda/envs/torch/bin/python -u mlp_datagen.py \
     --split $SPLIT \
     --batch_idx $BATCH_IDX \
     --dataset $DATASET \
     --generate-X-data $GENERATE_X \
-    --generate-Y-data $GENERATE_Y
+    --generate-Y-data $GENERATE_Y \
+    --hidden-layer $HIDDEN_LAYER
 
-echo "Completed processing $SPLIT split, batch $BATCH_IDX for dataset $DATASET" 
+echo "Completed processing $SPLIT split, batch $BATCH_IDX for dataset $DATASET with hidden layer $HIDDEN_LAYER"

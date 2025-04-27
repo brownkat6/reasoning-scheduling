@@ -322,7 +322,8 @@ def main():
     # Include hidden layer information in the directory name only
     layer_dir = f"layer_{args.hidden_layer}" if args.generate_X_data == "True" else ""
     
-    csv_file_X = f"data/{args.dataset}_results/{layer_dir}/{args.dataset}_X_{args.split}_{args.batch_idx}.csv"
+    # Modified directory structure: data/{layer_dir}/{args.dataset}_results
+    csv_file_X = f"data/{layer_dir}/{args.dataset}_results/{args.dataset}_X_{args.split}_{args.batch_idx}.csv"
     csv_file_Y = f"data/{args.dataset}_results/{args.dataset}_Y_{args.split}_{args.batch_idx}.csv"
     
     # Create the directory if it doesn't exist
@@ -343,7 +344,6 @@ def main():
     if args.generate_Y_data=="True":
         print(f"Generating Y data for batch {args.batch_idx} of split {args.split} for dataset {args.dataset}")
         generate_data_Y(batch_idx=args.batch_idx, split=args.split, output_csv=csv_file_Y, dataset=args.dataset, S=args.S)
-
 
 if __name__ == "__main__":
     main()
