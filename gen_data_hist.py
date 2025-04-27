@@ -38,104 +38,76 @@ def load_gsm8k_train_y_data():
 
 def expand_early_stop_data(df):
     """
-    Convert the dataframe with early_stop_correct_proportions lists into a long format
-    where each position gets its own row.
-    
-    Args:
-        df: DataFrame with columns including 'early_stop_correct_proportions'
-        
-    Returns:
-        DataFrame with columns:
-        - All original columns except 'early_stop_correct_proportions'
-        - position: The index in the early_stop_correct_proportions list (0-15)
-        - probability: The actual probability value
+    Expand the DataFrame to create a row for each position's probability.
+    Also converts position to token budget.
     """
-    # Create list to store expanded rows
     expanded_rows = []
     
-    # Iterate through original dataframe
     for _, row in df.iterrows():
-        # Get the probabilities list
-        probs = row['early_stop_correct_proportions']
-        
-        # Create a row for each position
-        for pos, prob in enumerate(probs):
-            # Create new row with all original data except early_stop_correct_proportions
-            new_row = {
-                'dataset': row['dataset'],
-                'question_id': row['question_id'],
-                'question_text': row['question_text'],
-                'split': row['split'],
-                'position': pos,
-                'probability': prob
-            }
+        probabilities = ast.literal_eval(row['early_stop_correct_proportions'])
+        for pos, prob in enumerate(probabilities):
+            new_row = row.copy()
+            # Convert position to token budget: (position + 1) * 16
+            token_budget = (pos + 1) * 16
+            new_row['token_budget'] = token_budget
+            new_row['probability'] = prob
             expanded_rows.append(new_row)
     
-    # Convert to DataFrame
     expanded_df = pd.DataFrame(expanded_rows)
-    
-    # Reset index
-    expanded_df = expanded_df.reset_index(drop=True)
+    expanded_df = expanded_df.drop('early_stop_correct_proportions', axis=1)
     
     print(f"Original shape: {df.shape}")
     print(f"Expanded shape: {expanded_df.shape}")
-    print(f"Number of positions per question: {len(df['early_stop_correct_proportions'].iloc[0])}")
+    print(f"Number of token budgets per question: {len(probabilities)}")
     
     return expanded_df
 
 def create_kde_plots(expanded_df, output_dir='figures'):
     """
     Create and save two KDE plots:
-    1. Distribution by position
-    2. Aggregate distribution across all positions
-    
-    Args:
-        expanded_df: DataFrame with 'position' and 'probability' columns
-        output_dir: Directory to save the plots
+    1. Distribution by token budget
+    2. Aggregate distribution across all token budgets
     """
-    # Create figures directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
+    plt.style.use('default')
     
-    # Set the style
-    #plt.style.use('seaborn')
-    
-    # 1. Position-wise KDE plot
+    # 1. Token budget-wise KDE plot
     plt.figure(figsize=(15, 10))
     
-    # Create a color map for positions
-    unique_positions = sorted(expanded_df['position'].unique())
-    colors = plt.cm.viridis(np.linspace(0, 1, len(unique_positions)))
+    # Create a color map for token budgets
+    unique_budgets = sorted(expanded_df['token_budget'].unique())
+    colors = plt.cm.viridis(np.linspace(0, 1, len(unique_budgets)))
     
-    # Plot each position's distribution
-    for pos, color in zip(unique_positions, colors):
-        pos_data = expanded_df[expanded_df['position'] == pos]['probability']
+    # Plot each token budget's distribution
+    for budget, color in zip(unique_budgets, colors):
+        budget_data = expanded_df[expanded_df['token_budget'] == budget]['probability']
         sns.kdeplot(
-            data=pos_data,
-            label=f'Position {pos}',
+            data=budget_data,
+            label=f'Token Budget {budget}',
             color=color,
             alpha=0.7,
             linewidth=2
         )
     
-    plt.title('Distribution of Early Stopping Probabilities by Position', fontsize=16, pad=20)
+    plt.title('Distribution of Early Stopping Probabilities by Token Budget', fontsize=16, pad=20)
     plt.xlabel('Probability of Correct Answer', fontsize=14)
     plt.ylabel('Density', fontsize=14)
     
     # Place legend inside the plot in the upper right
-    plt.legend(title='Position',
+    plt.legend(title='Token Budget',
               title_fontsize=12,
               fontsize=10,
               loc='upper right',
-              ncol=2,  # Use 2 columns to make legend more compact
-              framealpha=0.9)  # Make legend background slightly transparent
+              ncol=2,
+              framealpha=0.9)
     
     plt.grid(True, alpha=0.3)
     
-    # Save position-wise plot
-    position_wise_path = os.path.join(output_dir, 'early_stopping_kde_by_position.png')
-    plt.savefig(position_wise_path, dpi=300, bbox_inches='tight')
+    # Save token budget-wise plot
+    budget_wise_path = os.path.join(output_dir, 'early_stopping_kde_by_budget.png')
+    plt.savefig(budget_wise_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"Position-wise KDE plot saved to {position_wise_path}")
+    print(f"Token budget-wise KDE plot saved to {budget_wise_path}")
     
     # 2. Aggregate KDE plot
     plt.figure(figsize=(12, 8))
@@ -160,7 +132,7 @@ def create_kde_plots(expanded_df, output_dir='figures'):
     plt.axvline(x=median_prob, color='green', linestyle='--', 
                 label=f'Median = {median_prob:.3f}')
     
-    plt.title('Aggregate Distribution of Early Stopping Probabilities\nAcross All Positions', 
+    plt.title('Aggregate Distribution of Early Stopping Probabilities\nAcross All Token Budgets', 
               fontsize=16, pad=20)
     plt.xlabel('Probability of Correct Answer', fontsize=14)
     plt.ylabel('Density', fontsize=14)
@@ -212,10 +184,10 @@ def main():
     # Print some statistics
     print("\nData Statistics:")
     print(f"Total number of questions: {len(original_df)}")
-    print(f"Total number of position-probability pairs: {len(expanded_df)}")
-    print("\nProbability distribution by position:")
-    position_stats = expanded_df.groupby('position')['probability'].agg(['mean', 'std', 'min', 'max'])
-    print(position_stats)
+    print(f"Total number of token budgets: {len(expanded_df)}")
+    print("\nProbability distribution by token budget:")
+    budget_stats = expanded_df.groupby('token_budget')['probability'].agg(['mean', 'std', 'min', 'max'])
+    print(budget_stats)
 
 if __name__ == "__main__":
     main()
