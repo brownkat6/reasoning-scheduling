@@ -1,12 +1,11 @@
 #!/bin/bash
-#SBATCH --time=36:00:00           # Increased time limit for all models
+#SBATCH --time=18:00:00           # Increased time limit for all models
 #SBATCH --partition=seas_compute
 #SBATCH --output=logs/model_pipeline_%A_%a.out
 #SBATCH --error=logs/model_pipeline_%A_%a.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem=128G
-#SBATCH --cpus-per-task=4
 #SBATCH --array=0-3              # One job per model
 
 # Create necessary directories
