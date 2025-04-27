@@ -97,7 +97,7 @@ def create_kde_plots(expanded_df, output_dir='figures'):
     os.makedirs(output_dir, exist_ok=True)
     
     # Set the style
-    plt.style.use('seaborn')
+    #plt.style.use('seaborn')
     
     # 1. Position-wise KDE plot
     plt.figure(figsize=(15, 10))
