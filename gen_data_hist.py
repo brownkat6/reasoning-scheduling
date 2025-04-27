@@ -44,7 +44,8 @@ def expand_early_stop_data(df):
     expanded_rows = []
     
     for _, row in df.iterrows():
-        probabilities = ast.literal_eval(row['early_stop_correct_proportions'])
+        # The data is already a list, no need for ast.literal_eval
+        probabilities = row['early_stop_correct_proportions']
         for pos, prob in enumerate(probabilities):
             new_row = row.copy()
             # Convert position to token budget: (position + 1) * 16
