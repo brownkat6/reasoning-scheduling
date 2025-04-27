@@ -101,22 +101,35 @@ def create_kde_plots(expanded_df, output_dir='figures'):
     
     # 1. Position-wise KDE plot
     plt.figure(figsize=(15, 10))
-    sns.kdeplot(
-        data=expanded_df,
-        x='probability',
-        hue='position',
-        palette='viridis',
-        common_norm=False,
-        alpha=0.7,
-        linewidth=2
-    )
+    
+    # Create a color map for positions
+    unique_positions = sorted(expanded_df['position'].unique())
+    colors = plt.cm.viridis(np.linspace(0, 1, len(unique_positions)))
+    
+    # Plot each position's distribution
+    for pos, color in zip(unique_positions, colors):
+        pos_data = expanded_df[expanded_df['position'] == pos]['probability']
+        sns.kdeplot(
+            data=pos_data,
+            label=f'Position {pos}',
+            color=color,
+            alpha=0.7,
+            linewidth=2
+        )
     
     plt.title('Distribution of Early Stopping Probabilities by Position', fontsize=16, pad=20)
     plt.xlabel('Probability of Correct Answer', fontsize=14)
     plt.ylabel('Density', fontsize=14)
-    plt.legend(title='Position', title_fontsize=12, fontsize=10, bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # Place legend inside the plot in the upper right
+    plt.legend(title='Position',
+              title_fontsize=12,
+              fontsize=10,
+              loc='upper right',
+              ncol=2,  # Use 2 columns to make legend more compact
+              framealpha=0.9)  # Make legend background slightly transparent
+    
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
     
     # Save position-wise plot
     position_wise_path = os.path.join(output_dir, 'early_stopping_kde_by_position.png')
@@ -129,8 +142,7 @@ def create_kde_plots(expanded_df, output_dir='figures'):
     
     # Create aggregate KDE plot
     sns.kdeplot(
-        data=expanded_df,
-        x='probability',
+        data=expanded_df['probability'],
         color='blue',
         fill=True,
         alpha=0.3,
@@ -152,7 +164,9 @@ def create_kde_plots(expanded_df, output_dir='figures'):
               fontsize=16, pad=20)
     plt.xlabel('Probability of Correct Answer', fontsize=14)
     plt.ylabel('Density', fontsize=14)
-    plt.legend(fontsize=12)
+    
+    # Place legend inside the plot in the upper right
+    plt.legend(fontsize=12, loc='upper right', framealpha=0.9)
     plt.grid(True, alpha=0.3)
     
     # Add summary statistics as text
