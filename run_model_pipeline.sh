@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --time=18:00:00           # Increased time limit for all models
-#SBATCH --partition=seas_compute
+#SBATCH --partition=seas_gpu
+#SBATCH --gres=gpu:1               # Request 1 GPUs
 #SBATCH --output=logs/model_pipeline_%A_%a.out
 #SBATCH --error=logs/model_pipeline_%A_%a.err
 #SBATCH --nodes=1
