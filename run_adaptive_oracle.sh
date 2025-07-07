@@ -19,6 +19,9 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 OUTPUT_DIR="${SCRIPT_DIR}/../benchmark-output"
 mkdir -p "${OUTPUT_DIR}"
 
+# Set Python command (can be overridden by environment variable)
+PYTHON_CMD=${PYTHON_CMD:-python3}
+
 # Run the token deprivation experiment
 set -x
 
@@ -26,7 +29,7 @@ set -x
 END=${1:-100}
 
 # Run the adaptive token deprivation experiment
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u Dynasor/benchmark/TokenDeprivation/run_adaptive.py \
+${PYTHON_CMD:-python3} -u Dynasor/benchmark/TokenDeprivation/run_adaptive.py \
     --dataset gsm8k \
     --mlp_train_dataset gsm8k \
     --mlp_train_split train \

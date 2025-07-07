@@ -12,5 +12,15 @@
 #SBATCH --cpus-per-task=4 # Number of CPU cores per task
 
 
-cd /n/home04/amuppidi/reasoning-scheduling
-~/.conda/envs/torch/bin/python finetuning.py  "--output_dir" "/n/netscratch/gershman_lab/Lab/amuppidi/reasoning" "--use_lora"
+# Get script directory and change to project root
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+cd "$SCRIPT_DIR"
+
+# Set Python command and output directory from environment or defaults
+PYTHON_CMD=${PYTHON_CMD:-python3}
+OUTPUT_DIR=${OUTPUT_DIR:-"./outputs"}
+
+# Create output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
+
+$PYTHON_CMD finetuning.py "--output_dir" "$OUTPUT_DIR" "--use_lora"

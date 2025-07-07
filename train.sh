@@ -20,14 +20,15 @@ mkdir -p logs
 echo "Running with X_STEM: $X_STEM"
 echo "Layer name: $LAYER_NAME"
 
-# if the environment variable $USER is katrinabrown, cd /n/home11/katrinabrown/thesis/reasoning-scheduling
-if [ "$USER" == "katrinabrown" ]; then
-    cd /n/home11/katrinabrown/thesis/reasoning-scheduling
-    PYTHON="/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python"
-else
-    cd /n/home04/amuppidi/reasoning-scheduling
-    PYTHON="~/.conda/envs/torch/bin/python"
-fi
-$PYTHON -u mlp_train_orig.py \
+# Get script directory and change to project root
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+cd "$SCRIPT_DIR"
+
+# Set Python command from environment or default
+PYTHON_CMD=${PYTHON_CMD:-python3}
+
+# Note: This script references mlp_train_orig.py which was deleted
+# You may need to update this to use mlp_train.py instead
+$PYTHON_CMD -u mlp_train.py \
   --X-STEM "$X_STEM" \
   --layer "$LAYER_NAME"

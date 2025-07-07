@@ -20,9 +20,12 @@ mkdir -p "${OUTPUT_DIR}"
 # Set default value for end
 END=${1:-100}
 
+# Set Python command (can be overridden by environment variable)
+PYTHON_CMD=${PYTHON_CMD:-python3}
+
 # Run the token deprivation experiment
 set -x
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "Dynasor/benchmark/TokenDeprivation/run.py" \
+${PYTHON_CMD:-python3} -u "Dynasor/benchmark/TokenDeprivation/run.py" \
     --model "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" \
     --dataset "gsm8k" \
     --step 32 \

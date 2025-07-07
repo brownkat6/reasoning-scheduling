@@ -70,8 +70,14 @@ echo "Generate Y data: $GENERATE_Y"
 echo "Using hidden layer: $HIDDEN_LAYER"
 
 # Run mlp_datagen.py with appropriate parameters
-cd /n/home04/amuppidi/reasoning-scheduling
-~/.conda/envs/torch/bin/python -u mlp_datagen.py \
+# Get script directory and change to project root
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+cd "$SCRIPT_DIR"
+
+# Set Python command from environment or default
+PYTHON_CMD=${PYTHON_CMD:-python3}
+
+$PYTHON_CMD -u mlp_datagen.py \
     --split $SPLIT \
     --batch_idx $BATCH_IDX \
     --dataset $DATASET \

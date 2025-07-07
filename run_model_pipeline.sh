@@ -9,6 +9,9 @@
 #SBATCH --mem=128G
 #SBATCH --array=0-3              # One job per model
 
+# Set Python command from environment or default
+PYTHON_CMD=${PYTHON_CMD:-python3}
+
 # Create necessary directories
 mkdir -p logs
 mkdir -p models
@@ -31,7 +34,7 @@ MODEL_SAFE=$(echo $MODEL | sed 's/\//-/g')
 
 # Step 1: Train MLP
 echo "Starting MLP training for $MODEL"
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u mlp_train.py \
+${PYTHON_CMD:-python3} -u mlp_train.py \
     --train_dataset gsm8k \
     --train_split train \
     --test_dataset gsm8k \
@@ -69,7 +72,7 @@ fi
 
 # Step 3: Visualize results
 echo "Starting visualization for $MODEL"
-/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u vis_adaptive.py \
+${PYTHON_CMD:-python3} -u vis_adaptive.py \
     --dataset gsm8k \
     --model "$MODEL" \
     --split train \

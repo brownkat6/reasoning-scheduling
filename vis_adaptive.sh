@@ -33,6 +33,9 @@ echo "MLP Model: $MLP_MODEL"
 echo "Layer Index: $LAYER_IDX"
 echo "End Index: $END"
 
+# Set Python command from environment or default
+PYTHON_CMD=${PYTHON_CMD:-python3}
+
 # Create a logs directory for individual run outputs
 mkdir -p logs/parallel_runs
 
@@ -49,7 +52,7 @@ run_with_log() {
 echo "Launching all runs in parallel..."
 
 # Run non-adaptive baseline
-run_with_log "nonadaptive" /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "Dynasor/benchmark/TokenDeprivation/run.py" \
+run_with_log "nonadaptive" ${PYTHON_CMD:-python3} -u "Dynasor/benchmark/TokenDeprivation/run.py" \
     --model "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" \
     --dataset "$DATASET" \
     --step 32 \
@@ -61,7 +64,7 @@ run_with_log "nonadaptive" /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bi
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
 
 # Run adaptive with MLP
-run_with_log "adaptive" /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "Dynasor/benchmark/TokenDeprivation/run_adaptive.py" \
+run_with_log "adaptive" ${PYTHON_CMD:-python3} -u "Dynasor/benchmark/TokenDeprivation/run_adaptive.py" \
     --dataset "$DATASET" \
     --mlp_train_dataset "$DATASET" \
     --mlp_train_split "$SPLIT" \
@@ -75,7 +78,7 @@ run_with_log "adaptive" /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/p
     --probe "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
 
 # Run adaptive with oracle
-run_with_log "oracle" /n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u "Dynasor/benchmark/TokenDeprivation/run_adaptive.py" \
+run_with_log "oracle" ${PYTHON_CMD:-python3} -u "Dynasor/benchmark/TokenDeprivation/run_adaptive.py" \
     --dataset "$DATASET" \
     --mlp_train_dataset "$DATASET" \
     --mlp_train_split "$SPLIT" \
@@ -104,7 +107,7 @@ NONADAPTIVE_DIR="results/${MODEL_NAME_FORMATTED}_${DATASET}_step32_max256_trials
 ORACLE_DIR="results/oracle_${MODEL_NAME_FORMATTED}_${DATASET}_mlp${DATASET}_${SPLIT}_layer_${LAYER_IDX}_0_${END}"
 
 echo -e "\nTo visualize results, run:"
-echo "/n/netscratch/dwork_lab/Lab/katrina/envs/reasoning/bin/python -u vis_adaptive.py \\"
+echo "${PYTHON_CMD:-python3} -u vis_adaptive.py \\"
 echo "    --dataset $DATASET \\"
 echo "    --model $MODEL_NAME \\"
 echo "    --split $SPLIT \\"

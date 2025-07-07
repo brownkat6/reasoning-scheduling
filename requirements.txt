@@ -1,0 +1,28 @@
+# Core dependencies for Predictive Scheduling framework
+torch>=1.12.0
+transformers>=4.21.0
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+scikit-learn>=1.0.0
+peft>=0.4.0
+openai>=1.0.0
+rich>=12.0.0
+PyYAML>=6.0
+tqdm>=4.60.0
+datasets>=2.0.0
+
+# Optional dependencies for enhanced functionality
+# Uncomment as needed:
+
+# For experiment tracking
+# wandb>=0.13.0
+
+# For secure API key storage
+# keyring>=23.0.0
+
+# For notebook examples
+# jupyter>=1.0.0
+# matplotlib>=3.5.0
+# seaborn>=0.11.0
+# plotly>=5.0.0

@@ -1,0 +1,51 @@
+# Predictive Scheduling Configuration
+# This file contains default configuration parameters for the predictive scheduling framework
+
+# Path Configuration
+paths:
+  # Base path for all data and models (will be auto-configured based on user if not specified)
+  base_path: ""
+  data_stem: ""
+  x_stem: ""
+  y_stem: ""
+  models_stem: ""
+
+# Model Configuration  
+model:
+  model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+  hidden_size: 1536
+  num_layers: 28
+  cache_dir: null
+  device: "auto"
+  use_flash_attention: true
+
+# Training Configuration
+training:
+  batch_size: 32
+  learning_rate: 0.0001
+  num_epochs: 10
+  weight_decay: 0.0
+  dropout: 0.0
+  seed: 42
+  gradient_clip_norm: 1.0
+  early_stopping_patience: 5
+
+# LoRA Configuration
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: ["q_proj", "v_proj"]
+  bias: "none"
+
+# Token Allocation Configuration
+allocation:
+  window_size: 16
+  min_allocation: 16
+  max_allocation: 256
+  probe_suffix: "... Oh, I suddenly got the answer to the whole problem, **Final Answer**\n\n\\[ \\boxed{"
+
+# Environment Settings
+user: ""  # Will be auto-detected from environment
+environment: "development"  # development, production, testing
+debug: false
