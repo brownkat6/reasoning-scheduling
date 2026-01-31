@@ -7,7 +7,7 @@
 This repository contains the official implementation of **Predictive Scheduling**, a plug-and-play framework for optimizing token budget allocation in large language model reasoning tasks.
 
 > **Paper**: [Predictive Scheduling for Efficient Inference-Time Reasoning in Large Language Models](https://arxiv.org/abs/2024.xxxxx)  
-> **Authors**: Katrina Brown, Aneesh Muppidi, Michael Mitzenmacher  
+> **Authors**: Katrina Brown, Aneesh Muppidi, Rana Shahout  
 
 ## Overview
 
@@ -16,13 +16,6 @@ LLMs achieve state-of-the-art accuracy on complex reasoning tasks by generating 
 1. **Pre-run prediction**: Estimates optimal reasoning length or difficulty before generation
 2. **Dynamic allocation**: Distributes token budgets based on predicted complexity  
 3. **Plug-and-play design**: Works with existing LLMs without model modifications
-
-### Key Results
-
-- **+7.9% absolute accuracy** improvement over uniform budgeting at equal token cost
-- **>50% gap closure** toward oracle with perfect foresight
-- **Middle layers (12-17)** of transformers provide strongest predictive signals
-- **Difficulty-based allocation** outperforms size-based allocation across all budgets
 
 ## Quick Start
 
@@ -230,60 +223,31 @@ allocation:
   max_allocation: 256
 ```
 
-## Security Features
 
-- **Secure API key management** with keyring integration
-- **Input validation** to prevent injection attacks  
-- **Path sanitization** to prevent directory traversal
-- **Configuration validation** with proper error handling
-
-```python
-from predictive_scheduling.security import APIKeyManager
-
-# Securely store API key
-APIKeyManager.set_api_key("openai", "your-api-key")
-
-# Retrieve API key securely  
-api_key = APIKeyManager.get_api_key("openai")
-```
-
-## 📈 Performance
-
+## Performance
 | Model Type | Correlation | Training Time | Inference Speed |
 |------------|-------------|---------------|-----------------|
 | MLP (Layer 16) | 0.742 | ~10 min | <1ms/query |
 | LoRA Early Stop | 0.444 | ~2 hours | ~50ms/query |
 | LoRA Difficulty | 66.3% acc | ~30 min | ~50ms/query |
 
-## Contributing
 
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📚 Citation
+## Citation
 
 If you use this code in your research, please cite our paper:
 
 ```bibtex
-@article{muppidi2024predictive,
-  title={Predictive Scheduling for Efficient Inference-Time Reasoning in Large Language Models},
-  author={Muppidi, Aneesh and Brown, Katrina and Mitzenmacher, Michael},
-  journal={arXiv preprint arXiv:2024.xxxxx},
-  year={2024}
+@article{brown2025predictive,
+  title={Predictive Scheduling for Efficient Inference-Time
+         Reasoning in Large Language Models},
+  author={Brown, Katrina and Muppidi, Aneesh and Shahout, Rana},
+  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  year={2025}
 }
 ```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 
 ## Contact
 
 - **Aneesh Muppidi**: [aneeshmuppidi@college.harvard.edu](mailto:aneeshmuppidi@college.harvard.edu)
 - **Katrina Brown**: [katrinabrown@college.harvard.edu](mailto:katrinabrown@college.harvard.edu)
-- **Michael Mitzenmacher**: [michaelm@eecs.harvard.edu](mailto:michaelm@eecs.harvard.edu)
+- **Rana Shahout**: [rana@seas.harvard.edu ](mailto:rana@seas.harvard.edu )
