@@ -6,7 +6,7 @@
 
 This repository contains the official implementation of **Predictive Scheduling**, a plug-and-play framework for optimizing token budget allocation in large language model reasoning tasks.
 
-> **Paper**: [Predictive Scheduling for Efficient Inference-Time Reasoning in Large Language Models](https://openreview.net/pdf?id=Mn3lrAWy20)  
+> **Paper**: [Predictive Scheduling for Efficient Inference-Time Reasoning in Large Language Models](https://aneeshers.github.io/predictive-scheduling/)  
 > **Authors**: Katrina Brown, Aneesh Muppidi, Rana Shahout  
 
 ## Overview
