@@ -2,7 +2,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![arXiv](https://img.shields.io/badge/arXiv-2024.xxxxx-b31b1b.svg)](https://arxiv.org/abs/2024.xxxxx)
+[![arXiv](https://img.shields.io/badge/arXiv-2026.01237-b31b1b.svg)](https://arxiv.org/abs/2602.01237)
 
 This repository contains the official implementation of **Predictive Scheduling**, a plug-and-play framework for optimizing token budget allocation in large language model reasoning tasks.
 
@@ -237,12 +237,14 @@ allocation:
 If you use this code in your research, please cite our paper:
 
 ```bibtex
-@article{brown2025predictive,
-  title={Predictive Scheduling for Efficient Inference-Time
-         Reasoning in Large Language Models},
-  author={Brown, Katrina and Muppidi, Aneesh and Shahout, Rana},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
-  year={2025}
+@misc{brown2026predictiveschedulingefficientinferencetime,
+      title={Predictive Scheduling for Efficient Inference-Time Reasoning in Large Language Models}, 
+      author={Katrina Brown and Aneesh Muppidi and Rana Shahout},
+      year={2026},
+      eprint={2602.01237},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2602.01237}, 
 }
 ```
 
